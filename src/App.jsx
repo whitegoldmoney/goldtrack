@@ -15,8 +15,10 @@ export default function App() {
   const [pendingLeads, setPendingLeads] = useState(0)
   const [toasts, addToast] = useToast()
   const profileRef = useRef(null)
+  const [welcome, setWelcome] = useState(null)
+  const [welcomeExit, setWelcomeExit] = useState(false)
 
-  async function handleLogin(u) {
+  async function handleLogin(u, fromScreen = false) {
     setLoading(true)
     const { data: prof } = await supabase.from('profiles').select('*').eq('id', u.id).single()
     if (!prof) { addToast('Profile not found. Contact admin.', 'error'); setLoading(false); return }
@@ -38,6 +40,12 @@ export default function App() {
     setLoading(false)
     setupRealtime(prof)
     if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission()
+    if (fromScreen) {
+      setWelcome({ name: prof.name })
+      setWelcomeExit(false)
+      setTimeout(() => setWelcomeExit(true), 2300)
+      setTimeout(() => setWelcome(null), 2900)
+    }
   }
 
   function notify(title, body) {
@@ -73,7 +81,7 @@ export default function App() {
   // Check for existing session on load
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) handleLogin(data.session.user)
+      if (data.session) handleLogin(data.session.user, false)
       else setLoading(false)
     })
   }, [])
@@ -85,9 +93,18 @@ export default function App() {
     </div>
   )
 
-  if (!user || !profile) return <LoginScreen onLogin={handleLogin} />
+  if (!user || !profile) return <LoginScreen onLogin={u => handleLogin(u, true)} />
 
   return (
+    <>
+    {welcome && (
+      <div className={`welcome-overlay${welcomeExit ? ' exiting' : ''}`}>
+        <div className="welcome-mark">✦</div>
+        <div className="welcome-eyebrow">Welcome to</div>
+        <div className="welcome-title">Tele-Sales Walk-in</div>
+        <div className="welcome-name">{welcome.name}</div>
+      </div>
+    )}
     <div className="app-shell">
       <div className="topbar">
         <div className="topbar-brand"><span className="dot" />GoldTrack</div>
@@ -107,5 +124,6 @@ export default function App() {
       </div>
       <Toast toasts={toasts} />
     </div>
+    </>
   )
 }

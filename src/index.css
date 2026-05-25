@@ -108,6 +108,20 @@ tbody td{padding:11px 14px;vertical-align:middle}
 ::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-track{background:var(--surface)}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.login-tabs{display:flex;background:var(--surface2);border-radius:var(--radius-sm);padding:3px;margin-bottom:24px;gap:2px}
+.login-tab{flex:1;padding:8px;border:none;border-radius:4px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;background:none;transition:all .15s}
+.login-tab.active{background:var(--white);color:var(--text);box-shadow:var(--shadow)}
+.login-tab:hover:not(.active){color:var(--text)}
+.welcome-overlay{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#1A1612 0%,#2C2620 60%,#3D3020 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;animation:wFadeIn .4s ease forwards}
+.welcome-overlay.exiting{animation:wFadeOut .6s ease forwards}
+.welcome-mark{width:80px;height:80px;background:linear-gradient(135deg,var(--gold),var(--gold-light));border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:34px;margin-bottom:32px;box-shadow:0 8px 32px rgba(201,168,76,.35);animation:wPop .7s cubic-bezier(0.34,1.56,0.64,1) .15s both}
+.welcome-eyebrow{font-size:12px;color:var(--text3);letter-spacing:.2em;text-transform:uppercase;margin-bottom:10px;animation:wSlide .5s ease .5s both}
+.welcome-title{font-size:34px;font-weight:700;color:var(--white);text-align:center;line-height:1.2;margin-bottom:20px;animation:wSlide .5s ease .65s both}
+.welcome-name{font-size:15px;color:var(--gold);font-weight:500;letter-spacing:.04em;animation:wSlide .5s ease .82s both}
+@keyframes wFadeIn{from{opacity:0}to{opacity:1}}
+@keyframes wFadeOut{from{opacity:1}to{opacity:0}}
+@keyframes wPop{from{opacity:0;transform:scale(0.3) rotate(-15deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes wSlide{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:768px){
   .stats-grid{grid-template-columns:repeat(2,1fr)}
   .form-grid{grid-template-columns:1fr}
