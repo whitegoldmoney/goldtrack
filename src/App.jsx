@@ -43,8 +43,8 @@ export default function App() {
     if (fromScreen) {
       setWelcome({ name: prof.name })
       setWelcomeExit(false)
-      setTimeout(() => setWelcomeExit(true), 2300)
-      setTimeout(() => setWelcome(null), 2900)
+      setTimeout(() => setWelcomeExit(true), 3800)
+      setTimeout(() => setWelcome(null), 4600)
     }
   }
 
@@ -99,10 +99,10 @@ export default function App() {
     <>
     {welcome && (
       <div className={`welcome-overlay${welcomeExit ? ' exiting' : ''}`}>
-        <div className="welcome-mark">✦</div>
-        <div className="welcome-eyebrow">Welcome to</div>
-        <div className="welcome-title">Tele-Sales Walk-in</div>
-        <div className="welcome-name">{welcome.name}</div>
+        <div className="welcome-hi">Hi, {welcome.name}</div>
+        <div className="welcome-title">Welcome to White Gold<br />Tele-Sales Walk-in</div>
+        <div className="welcome-divider" />
+        <div className="welcome-tagline">Where Every Lead Becomes Gold</div>
       </div>
     )}
     <div className="app-shell">
