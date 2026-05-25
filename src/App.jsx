@@ -5,6 +5,7 @@ import LoginScreen from './components/LoginScreen'
 import { Toast, Spinner } from './components/UI'
 import AgentDashboard from './pages/agent/AgentDashboard'
 import TLDashboard from './pages/tl/TLDashboard'
+import AdminDashboard from './pages/admin/AdminDashboard'
 
 export default function App() {
   const [user, setUser] = useState(null)
@@ -110,14 +111,16 @@ export default function App() {
         <div className="topbar-brand"><img src="/WG_Logo_Blue.png" alt="White Gold" className="topbar-logo" /></div>
         <div className="topbar-right">
           <span className="topbar-user">{profile.name}</span>
-          <span className="topbar-role">{profile.role === 'tl' ? 'Team Lead' : 'Agent'}</span>
+          <span className="topbar-role">{profile.role === 'admin' ? 'Admin' : profile.role === 'tl' ? 'Team Lead' : 'Agent'}</span>
           <button className="btn btn-outline btn-sm"
             style={{ color: 'var(--text3)', borderColor: 'rgba(255,255,255,.2)' }}
             onClick={handleLogout}>Sign out</button>
         </div>
       </div>
       <div className="main-content">
-        {profile.role === 'tl'
+        {profile.role === 'admin'
+          ? <AdminDashboard branches={branches} agents={agents} toast={addToast} />
+          : profile.role === 'tl'
           ? <TLDashboard profile={profile} branches={branches} agents={agents} toast={addToast} />
           : <AgentDashboard profile={profile} branches={branches} toast={addToast} pendingCount={pendingLeads} />
         }
