@@ -118,9 +118,7 @@ export default function App() {
         </div>
       </div>
       <div className="main-content">
-        {profile.role === 'admin'
-          ? <AdminDashboard branches={branches} agents={agents} toast={addToast} />
-          : profile.role === 'tl'
+        {(profile.role === 'tl' || profile.role === 'admin')
           ? <TLDashboard profile={profile} branches={branches} agents={agents} toast={addToast} />
           : <AgentDashboard profile={profile} branches={branches} toast={addToast} pendingCount={pendingLeads} />
         }

@@ -51,7 +51,7 @@ export default function TLDashboard({ profile, branches, agents, toast }) {
         <button className={`tab-btn ${tab === 'all' ? 'active' : ''}`} onClick={() => setTab('all')}>All Walk-ins</button>
       </div>
       {tab === 'pending' && <PendingApprovals profile={profile} branches={branches} agents={agents} toast={toast} onApproved={loadStats} />}
-      {tab === 'all' && <AllWalkIns branches={branches} agents={agents} />}
+      {tab === 'all' && <AllWalkIns branches={branches} agents={agents} profile={profile} toast={toast} />}
     </div>
   )
 }
