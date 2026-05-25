@@ -107,7 +107,7 @@ export default function App() {
     )}
     <div className="app-shell">
       <div className="topbar">
-        <div className="topbar-brand"><span className="dot" />GoldTrack</div>
+        <div className="topbar-brand"><img src="/WG_Logo_Blue.png" alt="White Gold" className="topbar-logo" /></div>
         <div className="topbar-right">
           <span className="topbar-user">{profile.name}</span>
           <span className="topbar-role">{profile.role === 'tl' ? 'Team Lead' : 'Agent'}</span>

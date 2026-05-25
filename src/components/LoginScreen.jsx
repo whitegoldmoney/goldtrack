@@ -54,8 +54,7 @@ export default function LoginScreen({ onLogin }) {
     <div className="login-wrap">
       <div className="login-box">
         <div className="login-logo">
-          <div className="login-logo-mark">✦</div>
-          <h1>GoldTrack</h1>
+          <img src="/WG_Logo_Blue.png" alt="White Gold" className="login-logo-img" />
           <p>Walk-in Management System</p>
         </div>
         <div className="login-tabs">

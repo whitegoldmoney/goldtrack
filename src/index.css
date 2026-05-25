@@ -85,9 +85,9 @@ tbody td{padding:11px 14px;vertical-align:middle}
 .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1A1612 0%,#2C2620 100%)}
 .login-box{background:var(--white);border-radius:16px;padding:40px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
 .login-logo{text-align:center;margin-bottom:28px}
-.login-logo-mark{width:48px;height:48px;background:var(--gold);border-radius:12px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:12px}
-.login-logo h1{font-size:22px;font-weight:600}
+.login-logo-img{width:200px;height:auto;margin-bottom:14px;display:block;margin-left:auto;margin-right:auto}
 .login-logo p{font-size:13px;color:var(--text3);margin-top:4px}
+.topbar-logo{height:32px;width:auto;filter:brightness(0) invert(1)}
 .empty{text-align:center;padding:48px 24px;color:var(--text3)}
 .empty-icon{font-size:36px;margin-bottom:12px}
 .lead-source-options{display:flex;gap:8px;flex-wrap:wrap}
