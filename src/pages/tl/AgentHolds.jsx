@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { fmt } from '../../lib/utils'
 import { Loading, Empty } from '../../components/UI'
 
-export default function AgentHolds({ agents, branches, toast, profile }) {
+export default function AgentHolds({ agents, branches, toast, profile, teamAgentIds }) {
   const [rows, setRows]         = useState([])
   const [loading, setLoading]   = useState(true)
   const [expanded, setExpanded] = useState({})
@@ -12,11 +12,12 @@ export default function AgentHolds({ agents, branches, toast, profile }) {
 
   async function load() {
     setLoading(true)
-    const { data } = await supabase
-      .from('walk_ins')
-      .select('*')
-      .eq('status', 'draft')
-      .order('created_at', { ascending: false })
+    if (teamAgentIds !== null && teamAgentIds.length === 0) {
+      setRows([]); setLoading(false); return
+    }
+    let q = supabase.from('walk_ins').select('*').eq('status', 'draft').order('created_at', { ascending: false })
+    if (teamAgentIds !== null) q = q.in('submitted_by', teamAgentIds)
+    const { data } = await q
     setRows(data || [])
     setLoading(false)
   }

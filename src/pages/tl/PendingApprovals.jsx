@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { fmt } from '../../lib/utils'
 import { Empty, Loading, Spinner } from '../../components/UI'
 
-export default function PendingApprovals({ profile, branches, agents, toast, onApproved }) {
+export default function PendingApprovals({ profile, branches, agents, toast, onApproved, teamAgentIds }) {
   const [rows, setRows]             = useState([])
   const [loading, setLoading]       = useState(true)
   const [processing, setProcessing] = useState({})
@@ -13,8 +13,12 @@ export default function PendingApprovals({ profile, branches, agents, toast, onA
 
   async function load() {
     setLoading(true)
-    const { data } = await supabase.from('walk_ins').select('*').eq('status', 'pending')
-      .order('created_at', { ascending: true })
+    if (teamAgentIds !== null && teamAgentIds.length === 0) {
+      setRows([]); setLoading(false); return
+    }
+    let q = supabase.from('walk_ins').select('*').eq('status', 'pending').order('created_at', { ascending: true })
+    if (teamAgentIds !== null) q = q.in('submitted_by', teamAgentIds)
+    const { data } = await q
     setRows(data || [])
     setLoading(false)
   }
@@ -131,7 +135,7 @@ export default function PendingApprovals({ profile, branches, agents, toast, onA
                   onChange={e => setD(r.id, 'assigned_agent_id', e.target.value)}
                 >
                   <option value="">— Assign Agent —</option>
-                  {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  {(teamAgentIds !== null ? agents.filter(a => teamAgentIds.includes(a.id)) : agents).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
               )}
 

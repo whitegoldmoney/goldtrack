@@ -6,27 +6,33 @@ import { StatusBadge, Loading, Spinner } from '../../components/UI'
 const srcLabel = { today: 'Today', this_month: 'This Month', previous_month: 'Prev Month' }
 const displaySource = s => srcLabel[s] || s || '—'
 
-export default function AllWalkIns({ branches, agents, profile, toast }) {
+export default function AllWalkIns({ branches, agents, profile, toast, teamAgentIds }) {
   const [rows, setRows]       = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter]   = useState({ status: '', type: '', date: '', search: '' })
   const [editing, setEditing] = useState(null)
   const [saving, setSaving]   = useState(false)
   const [deleting, setDeleting] = useState(null)
+  const [showAll, setShowAll] = useState(false)
 
   const canEdit   = profile?.role === 'admin' || profile?.role === 'tl'
   const canDelete = profile?.role === 'admin'
+  const isTL      = profile?.role === 'tl'
 
   async function load() {
     setLoading(true)
+    if (teamAgentIds !== null && !showAll && teamAgentIds.length === 0) {
+      setRows([]); setLoading(false); return
+    }
     let q = supabase.from('walk_ins').select('*').neq('status', 'draft').order('created_at', { ascending: false }).limit(500)
+    if (teamAgentIds !== null && !showAll) q = q.in('submitted_by', teamAgentIds)
     if (filter.status) q = q.eq('status', filter.status)
     if (filter.type)   q = q.eq('walk_in_type', filter.type)
     if (filter.date)   q = q.eq('visit_date', filter.date)
     const { data } = await q
     setRows(data || []); setLoading(false)
   }
-  useEffect(() => { load() }, [filter.status, filter.type, filter.date])
+  useEffect(() => { load() }, [filter.status, filter.type, filter.date, showAll])
 
   const branchName = id => (branches.find(b => b.id === id) || {}).name || '—'
   const agentName  = id => (agents.find(a => a.id === id) || {}).name  || '—'
@@ -95,6 +101,12 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
         </select>
         <input type="date" value={filter.date} onChange={e => setFilter(f => ({ ...f, date: e.target.value }))} />
         <button className="btn btn-outline btn-sm" onClick={load}>↻ Refresh</button>
+        {isTL && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text2)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            <input type="checkbox" checked={showAll} onChange={e => setShowAll(e.target.checked)} />
+            Show all walk-ins
+          </label>
+        )}
       </div>
 
       {loading ? <Loading /> : (

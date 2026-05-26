@@ -12,15 +12,23 @@ export default function TLDashboard({ profile, branches, agents, toast }) {
     pending: 0, today: 0, tele: 0, direct: 0, completed: 0, holds: 0
   })
 
+  const isAdmin = profile.role === 'admin'
+  const myTeamAgentIds = isAdmin ? null : agents.filter(a => a.assigned_tl === profile.id).map(a => a.id)
+
   async function loadStats() {
     const today = new Date().toISOString().split('T')[0]
+    if (myTeamAgentIds !== null && myTeamAgentIds.length === 0) {
+      setStats({ pending: 0, today: 0, tele: 0, direct: 0, completed: 0, holds: 0 })
+      return
+    }
+    const tf = q => myTeamAgentIds !== null ? q.in('submitted_by', myTeamAgentIds) : q
     const [p, tod, tele, dir, comp, holds] = await Promise.all([
-      supabase.from('walk_ins').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-      supabase.from('walk_ins').select('id', { count: 'exact', head: true }).eq('visit_date', today),
-      supabase.from('walk_ins').select('id', { count: 'exact', head: true }).eq('walk_in_type', 'tele_sales'),
-      supabase.from('walk_ins').select('id', { count: 'exact', head: true }).eq('walk_in_type', 'direct'),
-      supabase.from('walk_ins').select('id', { count: 'exact', head: true }).eq('status', 'completed'),
-      supabase.from('walk_ins').select('id', { count: 'exact', head: true }).eq('status', 'draft'),
+      tf(supabase.from('walk_ins').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
+      tf(supabase.from('walk_ins').select('id', { count: 'exact', head: true }).eq('visit_date', today)),
+      tf(supabase.from('walk_ins').select('id', { count: 'exact', head: true }).eq('walk_in_type', 'tele_sales')),
+      tf(supabase.from('walk_ins').select('id', { count: 'exact', head: true }).eq('walk_in_type', 'direct')),
+      tf(supabase.from('walk_ins').select('id', { count: 'exact', head: true }).eq('status', 'completed')),
+      tf(supabase.from('walk_ins').select('id', { count: 'exact', head: true }).eq('status', 'draft')),
     ])
     setStats({
       pending:   p.count    || 0,
@@ -95,9 +103,9 @@ export default function TLDashboard({ profile, branches, agents, toast }) {
       </div>
 
       {/* ── Tab content ── */}
-      {tab === 'pending'         && <PendingApprovals profile={profile} branches={branches} agents={agents} toast={toast} onApproved={loadStats} />}
-      {tab === 'all'             && <AllWalkIns branches={branches} agents={agents} profile={profile} toast={toast} />}
-      {tab === 'holds'           && <AgentHolds agents={agents} branches={branches} toast={toast} profile={profile} />}
+      {tab === 'pending'         && <PendingApprovals profile={profile} branches={branches} agents={agents} toast={toast} onApproved={loadStats} teamAgentIds={myTeamAgentIds} />}
+      {tab === 'all'             && <AllWalkIns branches={branches} agents={agents} profile={profile} toast={toast} teamAgentIds={myTeamAgentIds} />}
+      {tab === 'holds'           && <AgentHolds agents={agents} branches={branches} toast={toast} profile={profile} teamAgentIds={myTeamAgentIds} />}
       {tab === 'pending-updates' && <PendingAgentUpdates agents={agents} branches={branches} />}
       {tab === 'import'          && <ImportData branches={branches} agents={agents} profile={profile} toast={toast} />}
     </div>
