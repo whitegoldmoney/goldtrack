@@ -141,8 +141,46 @@ tbody td{padding:14px 16px;vertical-align:middle}
 @keyframes wSlide{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 @keyframes wShimmer{0%{background-position:250% center}100%{background-position:-250% center}}
 @media(max-width:768px){
-  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  /* 1. Main content padding */
+  .main-content{padding:12px}
+  /* 2. Topbar */
+  .topbar{padding:10px 12px;height:auto;min-height:56px;flex-wrap:wrap;gap:8px}
+  .topbar-brand{font-size:14px}
+  .topbar-user{font-size:11px}
+  .topbar-role{font-size:10px;padding:2px 6px}
+  /* 3. Stats grid */
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .stat-num{font-size:24px}
+  .stat-label{font-size:10px}
+  /* 4. Tabs scrollable */
+  .tabs{overflow-x:auto;width:100%;-webkit-overflow-scrolling:touch}
+  .tab-btn{font-size:12px;padding:6px 12px;white-space:nowrap}
+  /* 5. Form grid single column */
   .form-grid{grid-template-columns:1fr}
-  .approval-card-info{grid-template-columns:1fr 1fr}
-  .main-content{padding:16px}
+  /* 6. Card padding */
+  .card{padding:14px}
+  /* 7. Approval cards */
+  .approval-card-info{grid-template-columns:1fr 1fr;gap:10px}
+  .approval-actions{flex-direction:column;align-items:stretch}
+  .approval-actions select,.approval-actions button{width:100%}
+  /* 8. Table horizontal scroll */
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{min-width:900px}
+  thead th{font-size:11px;padding:8px 10px}
+  tbody td{font-size:12px;padding:10px 10px}
+  /* 9. Filter bar stacked */
+  .filter-bar{flex-direction:column}
+  .filter-bar input,.filter-bar select{max-width:100%;width:100%}
+  /* 10. Lead source buttons full width */
+  .lead-source-options{flex-direction:column}
+  .lead-source-btn{width:100%;text-align:center}
+  /* 11. Login / setup boxes */
+  .login-wrap,.setup-wrap{padding:40px 16px 16px;align-items:flex-start}
+  .login-box{padding:24px 20px}
+  /* 12. Buttons tap targets */
+  .btn{min-height:44px;font-size:14px}
+  .btn-sm{min-height:36px;font-size:12px}
+  /* 13. Toast at top on mobile */
+  .toast-wrap{bottom:auto;top:16px;right:12px;left:12px}
+  .toast{font-size:13px}
 }
