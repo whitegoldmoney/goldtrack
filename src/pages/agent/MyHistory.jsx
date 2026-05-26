@@ -74,23 +74,23 @@ export default function MyHistory({ profile, branches }) {
       </div>
 
       {/* ── Date range filter ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-        <label style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600 }}>From</label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+        <label style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600, whiteSpace: 'nowrap' }}>From</label>
         <input
           type="date"
           value={dateFrom}
           max={dateTo || today}
           onChange={e => setDateFrom(e.target.value)}
-          style={{ fontSize: 13, padding: '5px 10px', borderRadius: 6, border: '1px solid var(--border2)', background: 'var(--surface)', color: 'var(--text)' }}
+          style={{ fontSize: 12, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border2)', background: 'var(--surface)', color: 'var(--text)', width: 130 }}
         />
-        <label style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600 }}>To</label>
+        <label style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600, whiteSpace: 'nowrap' }}>To</label>
         <input
           type="date"
           value={dateTo}
           min={dateFrom || undefined}
           max={today}
           onChange={e => setDateTo(e.target.value)}
-          style={{ fontSize: 13, padding: '5px 10px', borderRadius: 6, border: '1px solid var(--border2)', background: 'var(--surface)', color: 'var(--text)' }}
+          style={{ fontSize: 12, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border2)', background: 'var(--surface)', color: 'var(--text)', width: 130 }}
         />
         {hasFilter && (
           <button className="btn btn-outline btn-sm" onClick={clearFilter}>✕ Clear</button>
