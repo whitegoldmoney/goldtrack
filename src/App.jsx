@@ -57,7 +57,7 @@ export default function App() {
   function setupRealtime(prof) {
     supabase.channel('walkins-live')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'walk_ins' }, payload => {
-        if (profileRef.current?.role === 'tl') notify('New Walk-in', `${payload.new.customer_name} submitted`)
+        if (profileRef.current?.role === 'tl' || profileRef.current?.role === 'admin') notify('New Walk-in', `${payload.new.customer_name} submitted`)
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'walk_ins' }, payload => {
         const p = profileRef.current; const r = payload.new

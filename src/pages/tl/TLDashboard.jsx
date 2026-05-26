@@ -19,7 +19,15 @@ export default function TLDashboard({ profile, branches, agents, toast }) {
     ])
     setStats({ pending: p.count || 0, today: tod.count || 0, tele: tele.count || 0, direct: dir.count || 0, completed: comp.count || 0 })
   }
-  useEffect(() => { loadStats() }, [])
+  useEffect(() => {
+    loadStats()
+    // Refresh stats in real-time whenever any walk-in is inserted or updated
+    const channel = supabase.channel('tl-stats-live')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'walk_ins' }, loadStats)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'walk_ins' }, loadStats)
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [])
 
   return (
     <div>
