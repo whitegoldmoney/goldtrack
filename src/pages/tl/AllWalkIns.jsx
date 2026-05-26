@@ -70,7 +70,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
     setDeleting(null)
   }
 
-  const colCount = isAdmin ? 9 : 8
+  const colCount = isAdmin ? 12 : 11
 
   return (
     <div>
@@ -108,6 +108,9 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
                 <th style={{ minWidth: 150 }}>Remarks</th>
                 <th style={{ minWidth: 130 }}>Status</th>
                 <th style={{ minWidth: 130 }}>Walk-in Date</th>
+                <th style={{ minWidth: 130 }}>Gold / Grams</th>
+                <th style={{ minWidth: 110 }}>Grams Sold</th>
+                <th style={{ minWidth: 160 }}>Submitted</th>
                 {isAdmin && <th style={{ minWidth: 100 }}>Actions</th>}
               </tr>
             </thead>
@@ -150,8 +153,23 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
                     {/* Status badge */}
                     <td><StatusBadge status={r.status} /></td>
                     {/* Walk-in Date */}
-                    <td style={{ fontSize: 11, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
+                    <td style={{ fontSize: 13, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
                       {r.visit_date || '—'}
+                    </td>
+                    {/* Gold / Grams */}
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: 13, fontWeight: 500 }}>{r.gold_type || '—'}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'DM Mono' }}>{r.grams ? `${r.grams}g` : '—'}</div>
+                    </td>
+                    {/* Grams Sold */}
+                    <td style={{ fontFamily: 'DM Mono', fontSize: 13, whiteSpace: 'nowrap' }}>
+                      {r.grams_sold != null
+                        ? <span style={{ color: 'var(--green)', fontWeight: 600 }}>{r.grams_sold}g</span>
+                        : <span style={{ color: 'var(--text3)' }}>—</span>}
+                    </td>
+                    {/* Submitted */}
+                    <td style={{ fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
+                      {fmt(r.created_at)}
                     </td>
                     {/* Admin actions */}
                     {isAdmin && (
@@ -171,45 +189,28 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
                     )}
                   </tr>
 
-                  {/* ── Secondary info row — always visible ── */}
-                  <tr key={`${r.id}-info`} style={{ background: 'var(--surface)' }}>
-                    <td colSpan={colCount}
-                      style={{ padding: '5px 14px 8px 14px', borderBottom: '2px solid var(--border)' }}>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px 28px', fontSize: 11, color: 'var(--text2)' }}>
-                        {/* Gold / Grams */}
-                        <span>
-                          <span style={{ color: 'var(--text3)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.04em' }}>Gold: </span>
-                          <strong style={{ color: 'var(--text1)' }}>{r.gold_type || '—'} · {r.grams ? `${r.grams}g` : '—'}</strong>
-                        </span>
-                        {/* Grams Sold */}
-                        {r.grams_sold != null && (
-                          <span>
-                            <span style={{ color: 'var(--text3)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.04em' }}>Grams Sold: </span>
-                            <strong style={{ color: 'var(--green)' }}>{r.grams_sold}g</strong>
-                          </span>
-                        )}
-                        {/* Submitted */}
-                        <span>
-                          <span style={{ color: 'var(--text3)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.04em' }}>Submitted: </span>
-                          {fmt(r.created_at)}
-                        </span>
-                        {/* Rejection Reason */}
-                        {r.rejection_reason && (
-                          <span>
-                            <span style={{ color: 'var(--red)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.04em' }}>Rejection: </span>
-                            <span style={{ color: 'var(--red)' }}>{r.rejection_reason}</span>
-                          </span>
-                        )}
-                        {/* BM Remarks */}
-                        {r.bm_remarks && (
-                          <span style={{ flex: 1, minWidth: 180 }}>
-                            <span style={{ color: 'var(--text3)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.04em' }}>BM Remarks: </span>
-                            {r.bm_remarks}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                  {/* ── Secondary info row — only shown when there's extra detail ── */}
+                  {(r.rejection_reason || r.bm_remarks) && (
+                    <tr key={`${r.id}-info`} style={{ background: 'var(--surface)' }}>
+                      <td colSpan={colCount}
+                        style={{ padding: '5px 16px 8px 16px', borderBottom: '2px solid var(--border)' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 28px', fontSize: 12, color: 'var(--text2)' }}>
+                          {r.rejection_reason && (
+                            <span>
+                              <span style={{ color: 'var(--red)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em', fontWeight: 600 }}>Rejection Reason: </span>
+                              <span style={{ color: 'var(--red)' }}>{r.rejection_reason}</span>
+                            </span>
+                          )}
+                          {r.bm_remarks && (
+                            <span style={{ flex: 1, minWidth: 200 }}>
+                              <span style={{ color: 'var(--text3)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em', fontWeight: 600 }}>BM Remarks: </span>
+                              {r.bm_remarks}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 </>
               ))}
               {!filtered.length && (
