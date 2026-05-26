@@ -4,6 +4,7 @@ import NewWalkIn from './NewWalkIn'
 import MyDrafts from './MyDrafts'
 import MySubmissions from './MySubmissions'
 import MyLeads from './MyLeads'
+import MyHistory from './MyHistory'
 
 export default function AgentDashboard({ profile, branches, toast, pendingCount }) {
   const [tab, setTab] = useState('new')
@@ -34,6 +35,9 @@ export default function AgentDashboard({ profile, branches, toast, pendingCount 
         <button className={`tab-btn ${tab === 'leads' ? 'active' : ''}`} onClick={() => setTab('leads')}>
           My Leads {pendingCount > 0 && <span className="notif-count">{pendingCount}</span>}
         </button>
+        <button className={`tab-btn ${tab === 'history' ? 'active' : ''}`} onClick={() => setTab('history')}>
+          My History
+        </button>
       </div>
       </div>
 
@@ -48,6 +52,9 @@ export default function AgentDashboard({ profile, branches, toast, pendingCount 
       )}
       {tab === 'leads' && (
         <MyLeads profile={profile} branches={branches} toast={toast} />
+      )}
+      {tab === 'history' && (
+        <MyHistory profile={profile} branches={branches} />
       )}
     </div>
   )
