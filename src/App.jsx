@@ -35,7 +35,7 @@ export default function App() {
 
     const [{ data: brs }, { data: ags }] = await Promise.all([
       supabase.from('branches').select('*').order('name'),
-      supabase.from('profiles').select('id,name').eq('role', 'agent').order('name'),
+      supabase.from('profiles').select('id,name,assigned_tl').eq('role', 'agent').order('name'),
     ])
     setBranches(brs || [])
     setAgents(ags || [])
