@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import PendingApprovals from './PendingApprovals'
 import AllWalkIns from './AllWalkIns'
+import PendingAgentUpdates from './PendingAgentUpdates'
 import ImportData from '../admin/ImportData'
 
 export default function TLDashboard({ profile, branches, agents, toast }) {
@@ -58,12 +59,16 @@ export default function TLDashboard({ profile, branches, agents, toast }) {
           Pending Approvals {stats.pending > 0 && <span className="notif-count">{stats.pending}</span>}
         </button>
         <button className={`tab-btn ${tab === 'all' ? 'active' : ''}`} onClick={() => setTab('all')}>All Walk-ins</button>
+        <button className={`tab-btn ${tab === 'pending-updates' ? 'active' : ''}`} onClick={() => setTab('pending-updates')}>
+          ⚠ Agent Pending Updates
+        </button>
         {profile.role === 'admin' && (
           <button className={`tab-btn ${tab === 'import' ? 'active' : ''}`} onClick={() => setTab('import')}>⬆ Import Data</button>
         )}
       </div>
       {tab === 'pending' && <PendingApprovals profile={profile} branches={branches} agents={agents} toast={toast} onApproved={loadStats} />}
       {tab === 'all' && <AllWalkIns branches={branches} agents={agents} profile={profile} toast={toast} />}
+      {tab === 'pending-updates' && <PendingAgentUpdates agents={agents} branches={branches} />}
       {tab === 'import' && <ImportData branches={branches} agents={agents} profile={profile} toast={toast} />}
     </div>
   )
