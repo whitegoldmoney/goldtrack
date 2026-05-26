@@ -18,10 +18,7 @@ const WALKIN_STATUS = [
   { value: 'PM', label: 'PM — Previous Month' },
 ]
 
-// Previous month date range
-const now = new Date()
-const prevMonthFirst = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0]
-const prevMonthLast  = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0]
+const today = new Date().toISOString().split('T')[0]
 
 export default function MyLeads({ profile, branches, toast }) {
   const [rows, setRows] = useState([])
@@ -96,15 +93,14 @@ export default function MyLeads({ profile, branches, toast }) {
               </div>
               {f.walkin_status === 'PM' && (
                 <div className="form-group" style={{ flex: 1, minWidth: 160 }}>
-                  <label>Walk-in Date (Prev Month) *</label>
+                  <label>Actual Walk-in Date *</label>
                   <input
                     type="date"
                     value={f.pm_date || ''}
-                    min={prevMonthFirst}
-                    max={prevMonthLast}
+                    max={today}
                     onChange={e => setF(r.id, 'pm_date', e.target.value)}
                   />
-                  <span className="form-hint">{prevMonthFirst} → {prevMonthLast}</span>
+                  <span className="form-hint">Select the actual date of the walk-in</span>
                 </div>
               )}
             </div>
