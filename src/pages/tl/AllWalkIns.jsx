@@ -39,7 +39,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
   function setE(k, v) { setEditing(e => ({ ...e, [k]: v })) }
 
   async function handleSave() {
-    const { id, customer_name, phone, gold_type, grams, branch_id, visit_date,
+    const { id, customer_name, phone, alternate_phone, gold_type, grams, branch_id, visit_date,
       status, walk_in_type, assigned_agent_id, rejection_reason,
       remarks, grams_sold, bm_remarks } = editing
     if (!customer_name || !phone || !grams || !branch_id) {
@@ -48,6 +48,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
     setSaving(true)
     const { error } = await supabase.from('walk_ins').update({
       customer_name: customer_name.trim(), phone: phone.trim(),
+      alternate_phone: alternate_phone?.trim() || null,
       gold_type, grams: parseFloat(grams), branch_id: parseInt(branch_id),
       visit_date, status, walk_in_type: walk_in_type || null,
       assigned_agent_id: assigned_agent_id || null,
@@ -70,7 +71,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
     setDeleting(null)
   }
 
-  const colCount = isAdmin ? 12 : 11
+  const colCount = isAdmin ? 13 : 12
 
   return (
     <div>
@@ -101,6 +102,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
             <thead>
               <tr>
                 <th style={{ minWidth: 180 }}>Customer / Phone</th>
+                <th style={{ minWidth: 120 }}>Alt Phone</th>
                 <th style={{ minWidth: 150 }}>Branch</th>
                 <th style={{ minWidth: 160 }}>Type / Agent</th>
                 <th style={{ minWidth: 130 }}>Lead Source</th>
@@ -124,6 +126,10 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
                       <div style={{ fontWeight: 600, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                         title={r.customer_name}>{r.customer_name}</div>
                       <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'DM Mono' }}>{r.phone}</div>
+                    </td>
+                    {/* Alt Phone */}
+                    <td style={{ fontFamily: 'DM Mono', fontSize: 11, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
+                      {r.alternate_phone || '—'}
                     </td>
                     {/* Branch */}
                     <td style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
@@ -245,6 +251,10 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
                 <div className="form-group">
                   <label>Phone *</label>
                   <input value={editing.phone || ''} onChange={e => setE('phone', e.target.value)} maxLength={10} />
+                </div>
+                <div className="form-group">
+                  <label>Alternate Number</label>
+                  <input value={editing.alternate_phone || ''} onChange={e => setE('alternate_phone', e.target.value)} maxLength={10} placeholder="10-digit (optional)" />
                 </div>
                 <div className="form-group">
                   <label>Gold Type *</label>

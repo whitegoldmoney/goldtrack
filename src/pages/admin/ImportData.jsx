@@ -13,15 +13,15 @@ const LEAD_SOURCES = [
 ]
 
 const HEADERS = [
-  'Customer Name', 'Phone', 'Gold Type', 'Grams', 'Branch Name',
+  'Customer Name', 'Phone', 'Alternate Phone', 'Gold Type', 'Grams', 'Branch Name',
   'Walk-in Date (YYYY-MM-DD)', 'Walk-in Type', 'Agent Name',
   'Lead Source', 'Walk-in Status', 'Status', 'Rejection Reason'
 ]
 
 const SAMPLE_ROWS = [
-  ['Ravi Kumar',  '9876543210', 'Physical', '10.5', 'Main Branch', '2025-11-15', 'tele_sales', 'Agent Name', 'Google',         'CM', 'completed', ''],
-  ['Priya Nair',  '9123456789', 'Release',  '8.2',  'City Branch', '2025-10-20', 'direct',     '',           'WhatsApp Calls',  'PM', 'completed', ''],
-  ['Suresh Babu', '9988776655', 'Physical', '15.0', 'Main Branch', '2025-09-10', 'tele_sales', 'Agent Name', 'Social Media',   'NL', 'completed', ''],
+  ['Ravi Kumar',  '9876543210', '9000000001', 'Physical', '10.5', 'Main Branch', '2025-11-15', 'tele_sales', 'Agent Name', 'Google',         'CM', 'completed', ''],
+  ['Priya Nair',  '9123456789', '',           'Release',  '8.2',  'City Branch', '2025-10-20', 'direct',     '',           'WhatsApp Calls',  'PM', 'completed', ''],
+  ['Suresh Babu', '9988776655', '',           'Physical', '15.0', 'Main Branch', '2025-09-10', 'tele_sales', 'Agent Name', 'Social Media',   'NL', 'completed', ''],
 ]
 
 function toCSVLine(cols) {
@@ -84,7 +84,7 @@ export default function ImportData({ branches, agents, profile, toast }) {
       const rows = parseCSV(ev.target.result)
       const mapped = rows.map((cols, i) => {
         const [
-          customer_name, phone, gold_type, grams, branch_name,
+          customer_name, phone, alternate_phone, gold_type, grams, branch_name,
           visit_date, walk_in_type, agent_name, lead_source,
           walkin_status, status, rejection_reason
         ] = cols
@@ -106,6 +106,7 @@ export default function ImportData({ branches, agents, profile, toast }) {
         return {
           _row: i + 2, _error: error,
           customer_name, phone,
+          alternate_phone: alternate_phone?.trim() || null,
           gold_type: gold_type || 'Physical',
           grams: parseFloat(grams) || 0,
           branch_name, branch_id: branch?.id || null,
@@ -136,6 +137,7 @@ export default function ImportData({ branches, agents, profile, toast }) {
       const chunk = valid.slice(i, i + 50).map(r => ({
         customer_name:    r.customer_name,
         phone:            r.phone,
+        alternate_phone:  r.alternate_phone || null,
         gold_type:        r.gold_type,
         grams:            r.grams,
         branch_id:        r.branch_id,
@@ -228,7 +230,7 @@ export default function ImportData({ branches, agents, profile, toast }) {
           <div className="table-wrap">
             <table>
               <thead><tr>
-                <th>#</th><th>Customer</th><th>Phone</th><th>Gold</th><th>Grams</th>
+                <th>#</th><th>Customer</th><th>Phone</th><th>Alt Phone</th><th>Gold</th><th>Grams</th>
                 <th>Branch</th><th>Date</th><th>Type</th><th>Agent</th>
                 <th>Lead Source</th><th>W-Status</th><th>Status</th><th>Issue</th>
               </tr></thead>
@@ -238,6 +240,7 @@ export default function ImportData({ branches, agents, profile, toast }) {
                     <td style={{ fontSize: 11, color: 'var(--text3)' }}>{r._row}</td>
                     <td className="td-name">{r.customer_name}</td>
                     <td className="td-phone">{r.phone}</td>
+                    <td className="td-phone">{r.alternate_phone || '—'}</td>
                     <td style={{ fontSize: 12 }}>{r.gold_type}</td>
                     <td style={{ fontSize: 12 }}>{r.grams}g</td>
                     <td style={{ fontSize: 12, color: r.branch_id ? 'inherit' : 'var(--red)', fontWeight: r.branch_id ? 'normal' : 600 }}>{r.branch_name}</td>

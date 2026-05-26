@@ -23,7 +23,7 @@ export default function MySubmissions({ profile, branches }) {
     <div className="table-wrap">
       <table>
         <thead><tr>
-          <th>Customer</th><th>Phone</th><th>Gold</th><th>Grams</th>
+          <th>Customer</th><th>Phone</th><th>Alt Phone</th><th>Gold</th><th>Grams</th>
           <th>Branch</th><th>Date</th><th>Status</th><th>Rejection Note</th>
         </tr></thead>
         <tbody>
@@ -31,6 +31,7 @@ export default function MySubmissions({ profile, branches }) {
             <tr key={r.id}>
               <td className="td-name">{r.customer_name}</td>
               <td className="td-phone">{r.phone}</td>
+              <td className="td-phone">{r.alternate_phone || '—'}</td>
               <td><span style={{ fontSize: 12, padding: '2px 8px', background: 'var(--surface2)', borderRadius: 4 }}>{r.gold_type}</span></td>
               <td className="td-grams">{r.grams}g</td>
               <td style={{ fontSize: 12 }}>{branchName(r.branch_id)}</td>

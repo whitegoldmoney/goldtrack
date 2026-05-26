@@ -6,7 +6,7 @@ import { Spinner } from '../../components/UI'
 export default function NewWalkIn({ profile, branches, toast, onDraftSaved }) {
   const [paste, setPaste] = useState('')
   const [form, setForm] = useState({
-    customer_name: '', phone: '', gold_type: 'Physical', grams: '',
+    customer_name: '', phone: '', alternate_phone: '', gold_type: 'Physical', grams: '',
     branch_id: '', visit_date: new Date().toISOString().split('T')[0]
   })
   const [loading, setLoading] = useState(false)
@@ -30,6 +30,7 @@ export default function NewWalkIn({ profile, branches, toast, onDraftSaved }) {
     try {
       const { error } = await supabase.from('walk_ins').insert({
         customer_name: customer_name.trim(), phone: phone.trim(),
+        alternate_phone: form.alternate_phone?.trim() || null,
         gold_type, grams: parseFloat(grams), branch_id: parseInt(branch_id),
         visit_date, submitted_by: profile.id, status: 'draft'
       })
@@ -51,6 +52,7 @@ export default function NewWalkIn({ profile, branches, toast, onDraftSaved }) {
     try {
       const { error } = await supabase.from('walk_ins').insert({
         customer_name: customer_name.trim(), phone: phone.trim(),
+        alternate_phone: form.alternate_phone?.trim() || null,
         gold_type, grams: parseFloat(grams), branch_id: parseInt(branch_id),
         visit_date, submitted_by: profile.id, status: 'pending'
       })
@@ -105,6 +107,10 @@ export default function NewWalkIn({ profile, branches, toast, onDraftSaved }) {
           <div className="form-group">
             <label>Phone Number *</label>
             <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="10-digit" maxLength={10} />
+          </div>
+          <div className="form-group">
+            <label>Alternate Number <span style={{ color: 'var(--text3)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
+            <input value={form.alternate_phone} onChange={e => setForm(f => ({ ...f, alternate_phone: e.target.value }))} placeholder="10-digit (optional)" maxLength={10} />
           </div>
           <div className="form-group">
             <label>Gold Type *</label>

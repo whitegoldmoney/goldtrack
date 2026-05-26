@@ -80,6 +80,12 @@ export default function MyDrafts({ profile, branches, toast, onCountChange }) {
               <label>Phone</label>
               <p style={{ fontFamily: 'DM Mono', fontSize: 13 }}>{r.phone}</p>
             </div>
+            {r.alternate_phone && (
+              <div className="approval-card-field">
+                <label>Alt Phone</label>
+                <p style={{ fontFamily: 'DM Mono', fontSize: 13 }}>{r.alternate_phone}</p>
+              </div>
+            )}
             <div className="approval-card-field">
               <label>Gold / Grams</label>
               <p>{r.gold_type} · {r.grams}g</p>
