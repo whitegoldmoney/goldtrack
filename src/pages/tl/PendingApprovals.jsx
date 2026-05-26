@@ -30,18 +30,26 @@ export default function PendingApprovals({ profile, branches, agents, toast, onA
 
   async function approve(row) {
     const d = decisions[row.id] || {}
-    if (!d.walk_in_type) { toast('Select type: Tele Sales or Direct.', 'error'); return }
+    if (!d.walk_in_type) { toast('Select type first.', 'error'); return }
     if (d.walk_in_type === 'tele_sales' && !d.assigned_agent_id) { toast('Assign an agent for Tele Sales.', 'error'); return }
     setProcessing(p => ({ ...p, [row.id]: true }))
-    const { error } = await supabase.from('walk_ins').update({
-      status: d.walk_in_type === 'tele_sales' ? 'assigned' : 'direct',
-      walk_in_type: d.walk_in_type,
-      assigned_agent_id: d.assigned_agent_id || null,
+    const update = {
+      walk_in_type: d.walk_in_type === 'old_lead' ? 'tele_sales' : d.walk_in_type,
+      status: d.walk_in_type === 'tele_sales' ? 'assigned'
+            : d.walk_in_type === 'direct'     ? 'direct'
+            : 'old_lead',
+      assigned_agent_id: d.walk_in_type === 'tele_sales' ? d.assigned_agent_id : null,
       approved_by: profile.id,
       approved_at: new Date().toISOString()
-    }).eq('id', row.id)
+    }
+    const { error } = await supabase.from('walk_ins').update(update).eq('id', row.id)
     if (error) toast(error.message, 'error')
-    else { toast(`Approved as ${d.walk_in_type === 'tele_sales' ? 'Tele Sales' : 'Direct Walk-in'}!`, 'success'); load(); onApproved() }
+    else {
+      const label = d.walk_in_type === 'tele_sales' ? 'Tele Sales'
+                  : d.walk_in_type === 'direct'     ? 'Direct Walk-in'
+                  : 'Old Lead'
+      toast(`Approved as ${label}!`, 'success'); load(); onApproved()
+    }
     setProcessing(p => ({ ...p, [row.id]: false }))
   }
 
@@ -129,9 +137,10 @@ export default function PendingApprovals({ profile, branches, agents, toast, onA
                 <option value="">— Select Type —</option>
                 <option value="tele_sales">📞 Tele Sales</option>
                 <option value="direct">⚡ Direct Walk-in</option>
+                <option value="old_lead">📁 Old Lead</option>
               </select>
 
-              {/* Agent selector (Tele Sales only) */}
+              {/* Agent selector (Tele Sales only — not for Direct or Old Lead) */}
               {d.walk_in_type === 'tele_sales' && (
                 <select
                   style={{ width: '100%', marginTop: 6, padding: '7px 10px', fontSize: 13, borderRadius: 6, border: '1px solid var(--border2)' }}

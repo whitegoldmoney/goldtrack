@@ -6,6 +6,7 @@ export function StatusBadge({ status }) {
     completed: ['badge-completed', '✅ Completed'],
     rejected: ['badge-rejected', '✗ Rejected'],
     transferred: ['badge-transferred', '🔄 Transferred'],
+    old_lead: ['badge-old-lead', '📁 Old Lead'],
   }
   const [cls, label] = map[status] || ['badge-pending', status]
   return <span className={`badge ${cls}`}>{label}</span>

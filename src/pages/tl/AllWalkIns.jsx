@@ -102,6 +102,7 @@ export default function AllWalkIns({ branches, agents, profile, toast, tls = [] 
           <option value="direct">Direct</option>
           <option value="completed">Completed</option>
           <option value="rejected">Rejected</option>
+          <option value="old_lead">📁 Old Lead</option>
         </select>
         <select value={filter.type} onChange={e => setFilter(f => ({ ...f, type: e.target.value }))}>
           <option value="">All Types</option>
@@ -164,8 +165,10 @@ export default function AllWalkIns({ branches, agents, profile, toast, tls = [] 
                         {r.walk_in_type === 'tele_sales' ? '📞 Tele Sales' : r.walk_in_type === 'direct' ? '⚡ Direct' : '—'}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                        title={r.assigned_agent_id ? agentName(r.assigned_agent_id) : ''}>
-                        {r.assigned_agent_id ? agentName(r.assigned_agent_id) : ''}
+                        title={r.status === 'old_lead' ? 'Old Lead' : r.assigned_agent_id ? agentName(r.assigned_agent_id) : ''}>
+                        {r.status === 'old_lead'
+                          ? <span style={{ color: '#6A1B9A', fontWeight: 600 }}>📁 Old Lead</span>
+                          : r.assigned_agent_id ? agentName(r.assigned_agent_id) : ''}
                       </div>
                     </td>
                     {/* Team label */}
@@ -320,6 +323,7 @@ export default function AllWalkIns({ branches, agents, profile, toast, tls = [] 
                     <option value="direct">Direct</option>
                     <option value="completed">Completed</option>
                     <option value="rejected">Rejected</option>
+                    <option value="old_lead">📁 Old Lead</option>
                   </select>
                 </div>
                 <div className="form-group">
