@@ -87,7 +87,7 @@ export default function TLDashboard({ profile, branches, agents, toast }) {
         <button className={`tab-btn ${tab === 'pending-updates' ? 'active' : ''}`} onClick={() => setTab('pending-updates')}>
           ⚠ Agent Pending Updates
         </button>
-        {profile.role === 'admin' && (
+        {(profile.role === 'admin' || profile.role === 'tl') && (
           <button className={`tab-btn ${tab === 'import' ? 'active' : ''}`} onClick={() => setTab('import')}>
             ⬆ Import Data
           </button>

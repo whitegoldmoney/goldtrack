@@ -14,7 +14,8 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
   const [saving, setSaving]   = useState(false)
   const [deleting, setDeleting] = useState(null)
 
-  const isAdmin = profile?.role === 'admin'
+  const canEdit   = profile?.role === 'admin' || profile?.role === 'tl'
+  const canDelete = profile?.role === 'admin'
 
   async function load() {
     setLoading(true)
@@ -71,7 +72,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
     setDeleting(null)
   }
 
-  const colCount = isAdmin ? 13 : 12
+  const colCount = canEdit ? 13 : 12
 
   return (
     <div>
@@ -113,7 +114,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
                 <th style={{ minWidth: 130 }}>Gold / Grams</th>
                 <th style={{ minWidth: 110 }}>Grams Sold</th>
                 <th style={{ minWidth: 160 }}>Submitted</th>
-                {isAdmin && <th style={{ minWidth: 100 }}>Actions</th>}
+                {canEdit && <th style={{ minWidth: 100 }}>Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -177,19 +178,21 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
                     <td style={{ fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
                       {fmt(r.created_at)}
                     </td>
-                    {/* Admin actions */}
-                    {isAdmin && (
+                    {/* Actions — edit for TL+admin, delete for admin only */}
+                    {canEdit && (
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>
                           <button className="btn btn-outline btn-sm"
                             style={{ padding: '4px 8px' }}
                             onClick={() => setEditing({ ...r })}>✏</button>
-                          <button className="btn btn-danger btn-sm"
-                            style={{ padding: '4px 8px' }}
-                            onClick={() => handleDelete(r)}
-                            disabled={deleting === r.id}>
-                            {deleting === r.id ? <Spinner /> : '🗑'}
-                          </button>
+                          {canDelete && (
+                            <button className="btn btn-danger btn-sm"
+                              style={{ padding: '4px 8px' }}
+                              onClick={() => handleDelete(r)}
+                              disabled={deleting === r.id}>
+                              {deleting === r.id ? <Spinner /> : '🗑'}
+                            </button>
+                          )}
                         </div>
                       </td>
                     )}
@@ -231,7 +234,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
         </div>
       )}
 
-      {/* ── Edit Modal (admin only) ── */}
+      {/* ── Edit Modal (TL + admin) ── */}
       {editing && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setEditing(null)}>
           <div className="modal-box">
