@@ -3,7 +3,9 @@ import { supabase } from '../../lib/supabase'
 import { fmt } from '../../lib/utils'
 import { StatusBadge, Loading, Spinner } from '../../components/UI'
 
+// Legacy source keys mapped to labels; new entries store the source name directly
 const srcLabel = { today: 'Today', this_month: 'This Month', previous_month: 'Prev Month' }
+const displaySource = s => srcLabel[s] || s || '—'
 
 export default function AllWalkIns({ branches, agents, profile, toast }) {
   const [rows, setRows] = useState([])
@@ -97,7 +99,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
           <table>
             <thead><tr>
               <th>Customer</th><th>Phone</th><th>Gold</th><th>Grams</th><th>Branch</th>
-              <th>Type</th><th>Agent</th><th>Lead Src</th><th>Status</th><th>Submitted</th>
+              <th>Type</th><th>Agent</th><th>Lead Source</th><th>Walk-in Status</th><th>Status</th><th>Submitted</th>
               {isAdmin && <th>Actions</th>}
             </tr></thead>
             <tbody>
@@ -110,7 +112,11 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
                   <td style={{ fontSize: 12 }}>{branchName(r.branch_id)}</td>
                   <td style={{ fontSize: 12 }}>{r.walk_in_type === 'tele_sales' ? '📞 Tele' : r.walk_in_type === 'direct' ? '⚡ Direct' : '—'}</td>
                   <td style={{ fontSize: 12 }}>{r.assigned_agent_id ? agentName(r.assigned_agent_id) : '—'}</td>
-                  <td style={{ fontSize: 12 }}>{r.lead_source ? srcLabel[r.lead_source] : '—'}</td>
+                  <td style={{ fontSize: 12 }}>{displaySource(r.lead_source)}</td>
+                  <td style={{ fontSize: 12 }}>{r.walkin_status
+                    ? <span style={{ fontWeight: 600, color: 'var(--blue)' }}>{r.walkin_status}</span>
+                    : '—'}
+                  </td>
                   <td><StatusBadge status={r.status} /></td>
                   <td style={{ fontSize: 11, color: 'var(--text3)' }}>{fmt(r.created_at)}</td>
                   {isAdmin && (
@@ -126,7 +132,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
                 </tr>
               ))}
               {!filtered.length && (
-                <tr><td colSpan={isAdmin ? 11 : 10} style={{ textAlign: 'center', padding: 32, color: 'var(--text3)' }}>No records found.</td></tr>
+                <tr><td colSpan={isAdmin ? 12 : 11} style={{ textAlign: 'center', padding: 32, color: 'var(--text3)' }}>No records found.</td></tr>
               )}
             </tbody>
           </table>
