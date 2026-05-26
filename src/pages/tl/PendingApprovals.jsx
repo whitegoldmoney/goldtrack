@@ -31,23 +31,24 @@ export default function PendingApprovals({ profile, branches, agents, toast, onA
   async function approve(row) {
     const d = decisions[row.id] || {}
     if (!d.walk_in_type) { toast('Select type first.', 'error'); return }
-    if (d.walk_in_type === 'tele_sales' && !d.assigned_agent_id) { toast('Assign an agent for Tele Sales.', 'error'); return }
-    setProcessing(p => ({ ...p, [row.id]: true }))
-    const update = {
-      walk_in_type: d.walk_in_type === 'old_lead' ? 'tele_sales' : d.walk_in_type,
-      status: d.walk_in_type === 'tele_sales' ? 'assigned'
-            : d.walk_in_type === 'direct'     ? 'direct'
-            : 'old_lead',
-      assigned_agent_id: d.walk_in_type === 'tele_sales' ? d.assigned_agent_id : null,
-      approved_by: profile.id,
-      approved_at: new Date().toISOString()
+    if (d.walk_in_type === 'tele_sales' && !d.assigned_agent_id) {
+      toast('Assign an agent or select Old Lead.', 'error'); return
     }
+    setProcessing(p => ({ ...p, [row.id]: true }))
+
+    const isOldLead = d.walk_in_type === 'tele_sales' && d.assigned_agent_id === 'old_lead'
+    const update = d.walk_in_type === 'direct'
+      ? { walk_in_type: 'direct',     status: 'direct',    assigned_agent_id: null }
+      : { walk_in_type: 'tele_sales', status: isOldLead ? 'old_lead' : 'assigned',
+          assigned_agent_id: isOldLead ? null : d.assigned_agent_id }
+    Object.assign(update, { approved_by: profile.id, approved_at: new Date().toISOString() })
+
     const { error } = await supabase.from('walk_ins').update(update).eq('id', row.id)
     if (error) toast(error.message, 'error')
     else {
-      const label = d.walk_in_type === 'tele_sales' ? 'Tele Sales'
-                  : d.walk_in_type === 'direct'     ? 'Direct Walk-in'
-                  : 'Old Lead'
+      const label = d.walk_in_type === 'direct' ? 'Direct Walk-in'
+                  : isOldLead                   ? 'Old Lead'
+                  :                               'Tele Sales'
       toast(`Approved as ${label}!`, 'success'); load(); onApproved()
     }
     setProcessing(p => ({ ...p, [row.id]: false }))
@@ -137,7 +138,6 @@ export default function PendingApprovals({ profile, branches, agents, toast, onA
                 <option value="">— Select Type —</option>
                 <option value="tele_sales">📞 Tele Sales</option>
                 <option value="direct">⚡ Direct Walk-in</option>
-                <option value="old_lead">📁 Old Lead</option>
               </select>
 
               {/* Agent selector (Tele Sales only — not for Direct or Old Lead) */}
@@ -148,6 +148,7 @@ export default function PendingApprovals({ profile, branches, agents, toast, onA
                   onChange={e => setD(r.id, 'assigned_agent_id', e.target.value)}
                 >
                   <option value="">— Assign Agent —</option>
+                  <option value="old_lead">📁 Old Lead</option>
                   {(teamAgentIds !== null ? agents.filter(a => teamAgentIds.includes(a.id)) : agents).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
               )}
