@@ -20,6 +20,7 @@ export default function AgentDashboard({ profile, branches, toast, pendingCount 
 
   return (
     <div>
+      <div style={{ maxWidth: 800, margin: '0 auto' }}>
       <div className="tabs">
         <button className={`tab-btn ${tab === 'new' ? 'active' : ''}`} onClick={() => setTab('new')}>
           New Walk-in
@@ -33,6 +34,7 @@ export default function AgentDashboard({ profile, branches, toast, pendingCount 
         <button className={`tab-btn ${tab === 'leads' ? 'active' : ''}`} onClick={() => setTab('leads')}>
           My Leads {pendingCount > 0 && <span className="notif-count">{pendingCount}</span>}
         </button>
+      </div>
       </div>
 
       {tab === 'new' && (
