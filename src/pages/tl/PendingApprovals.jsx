@@ -53,6 +53,7 @@ export default function PendingApprovals({ profile, branches, agents, toast, onA
   }
 
   const branchName = id => (branches.find(b => b.id === id) || {}).name || '—'
+  const agentName  = id => (agents.find(a => a.id === id) || {}).name || 'Unknown'
 
   if (loading) return <Loading />
   if (!rows.length) return <Empty icon="✅" text="No pending walk-ins. All caught up!" />
@@ -100,6 +101,15 @@ export default function PendingApprovals({ profile, branches, agents, toast, onA
               <div className="sticky-card-row">
                 <span>🕐</span>
                 <span>Submitted: {fmt(r.created_at)}</span>
+              </div>
+
+              <div className="sticky-card-row">
+                <span>👤</span>
+                <span style={{
+                  fontWeight: 500, color: 'var(--text)',
+                  background: 'rgba(201,168,76,0.08)',
+                  borderRadius: 4, padding: '2px 4px'
+                }}>By: {agentName(r.submitted_by)}</span>
               </div>
 
               {/* Type selector */}
