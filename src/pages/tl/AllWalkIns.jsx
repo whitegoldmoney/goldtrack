@@ -96,7 +96,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
       </div>
 
       {loading ? <Loading /> : (
-        <div className="table-wrap" style={{ overflowX: 'auto' }}>
+        <div className="table-wrap table-admin" style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>

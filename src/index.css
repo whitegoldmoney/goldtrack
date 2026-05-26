@@ -65,12 +65,15 @@ textarea{resize:vertical;min-height:72px;font-family:'DM Mono',monospace;font-si
 .badge-completed{background:var(--green-bg);color:var(--green);border:1px solid #A9DFBF}
 .badge-rejected{background:var(--red-bg);color:var(--red);border:1px solid #F1948A}
 .table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border)}
-table{width:100%;border-collapse:collapse;font-size:15px}
-thead th{background:var(--surface2);padding:10px 16px;text-align:left;font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--surface2);padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);white-space:nowrap}
 tbody tr{border-bottom:1px solid var(--border)}
 tbody tr:last-child{border-bottom:none}
 tbody tr:hover{background:var(--surface)}
-tbody td{padding:14px 16px;vertical-align:middle}
+tbody td{padding:11px 14px;vertical-align:middle}
+.table-admin table{font-size:15px}
+.table-admin thead th{font-size:13px;padding:10px 16px}
+.table-admin tbody td{padding:14px 16px}
 .table-compact table{font-size:11px}
 .table-compact thead th{padding:6px 8px;font-size:10px;white-space:nowrap}
 .table-compact tbody td{padding:7px 8px}
