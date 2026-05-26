@@ -19,29 +19,37 @@ const WALKIN_STATUS = [
 ]
 
 const REMARKS_OPTIONS = [
-  'Taken Quotation',
-  'Price Enquiry',
-  'Price Issue',
-  'Verification Failed',
-  'Sold',
-  'KYC Failed',
-  'Release Loss',
+  'Taken Quotation', 'Price Enquiry', 'Price Issue',
+  'Verification Failed', 'Sold', 'KYC Failed', 'Release Loss',
 ]
 
 const today = new Date().toISOString().split('T')[0]
 
+const fieldLabel = {
+  fontSize: 10, fontWeight: 600, color: 'var(--text3)',
+  textTransform: 'uppercase', letterSpacing: '.04em',
+  display: 'block', marginBottom: 4
+}
+const fieldSelect = {
+  width: '100%', fontSize: 13, padding: '8px 12px',
+  borderRadius: 6, border: '1px solid var(--border2)',
+  background: 'var(--white)', color: 'var(--text)',
+  fontFamily: 'inherit'
+}
+
 export default function MyLeads({ profile, branches, toast }) {
-  const [rows, setRows] = useState([])
+  const [rows, setRows]   = useState([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState({})
-  const [form, setForm] = useState({}) // { [id]: { lead_source, walkin_status, pm_date } }
+  const [saving, setSaving]   = useState({})
+  const [form, setForm]   = useState({})
 
   async function load() {
     setLoading(true)
     const { data } = await supabase.from('walk_ins').select('*')
       .eq('assigned_agent_id', profile.id).eq('status', 'assigned')
       .order('created_at', { ascending: false })
-    setRows(data || []); setLoading(false)
+    setRows(data || [])
+    setLoading(false)
   }
   useEffect(() => { load() }, [])
 
@@ -51,11 +59,11 @@ export default function MyLeads({ profile, branches, toast }) {
 
   async function lockLead(id) {
     const f = form[id] || {}
-    if (!f.lead_source) { toast('Select a lead source.', 'error'); return }
+    if (!f.lead_source)   { toast('Select a lead source.', 'error'); return }
     if (!f.walkin_status) { toast('Select a walk-in status.', 'error'); return }
     if (f.walkin_status === 'PM' && !f.pm_date) { toast('Select the walk-in date for Previous Month.', 'error'); return }
+    if (f.remarks === 'Sold' && !f.grams_sold)  { toast('Enter how many grams were sold.', 'error'); return }
     setSaving(s => ({ ...s, [id]: true }))
-    if (f.remarks === 'Sold' && !f.grams_sold) { toast('Enter how many grams were sold.', 'error'); return }
     const updates = {
       lead_source: f.lead_source,
       walkin_status: f.walkin_status,
@@ -80,81 +88,126 @@ export default function MyLeads({ profile, branches, toast }) {
 
   return (
     <div>
-      {rows.map(r => {
-        const f = form[r.id] || {}
-        return (
-          <div key={r.id} className="approval-card" style={{ borderLeftColor: 'var(--blue)' }}>
-            <div className="approval-card-info">
-              <div className="approval-card-field"><label>Customer</label><p>{r.customer_name}</p></div>
-              <div className="approval-card-field"><label>Phone</label><p style={{ fontFamily: 'DM Mono', fontSize: 13 }}>{r.phone}</p></div>
-              <div className="approval-card-field"><label>Gold / Grams</label><p>{r.gold_type} · {r.grams}g</p></div>
-              <div className="approval-card-field"><label>Branch</label><p>{branchName(r.branch_id)}</p></div>
-            </div>
-            <div style={{ display: 'flex', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
-              <div className="form-group" style={{ flex: 2, minWidth: 200 }}>
-                <label>Lead Source *</label>
-                <select value={f.lead_source || ''} onChange={e => setF(r.id, 'lead_source', e.target.value)}>
+      <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 16 }}>
+        <strong>{rows.length}</strong> lead{rows.length !== 1 ? 's' : ''} assigned to you
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16, alignItems: 'start' }}>
+        {rows.map(r => {
+          const f = form[r.id] || {}
+          return (
+            <div key={r.id} className="sticky-card">
+
+              {/* ── Customer info ── */}
+              <div className="sticky-card-name">{r.customer_name}</div>
+
+              <div className="sticky-card-row">
+                <span>📞</span>
+                <span style={{ fontFamily: 'DM Mono' }}>{r.phone}</span>
+              </div>
+
+              {r.alternate_phone && (
+                <div className="sticky-card-row">
+                  <span>📱</span>
+                  <span style={{ fontFamily: 'DM Mono' }}>{r.alternate_phone}</span>
+                </div>
+              )}
+
+              <div className="sticky-card-row">
+                <span>🏦</span>
+                <span>{branchName(r.branch_id)}</span>
+              </div>
+
+              <div className="sticky-card-row" style={{ marginBottom: 12 }}>
+                <span>⚖️</span>
+                <span>{r.gold_type} · {r.grams}g</span>
+              </div>
+
+              {/* ── Lead Source ── */}
+              <div style={{ marginBottom: 10 }}>
+                <label style={fieldLabel}>Lead Source *</label>
+                <select style={fieldSelect} value={f.lead_source || ''} onChange={e => setF(r.id, 'lead_source', e.target.value)}>
                   <option value="">— Select Source —</option>
                   {LEAD_SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
-              <div className="form-group" style={{ flex: 1, minWidth: 160 }}>
-                <label>Walk-in Status *</label>
-                <select value={f.walkin_status || ''} onChange={e => setF(r.id, 'walkin_status', e.target.value)}>
+
+              {/* ── Walk-in Status ── */}
+              <div style={{ marginBottom: 10 }}>
+                <label style={fieldLabel}>Walk-in Status *</label>
+                <select style={fieldSelect} value={f.walkin_status || ''} onChange={e => setF(r.id, 'walkin_status', e.target.value)}>
                   <option value="">— Select —</option>
                   {WALKIN_STATUS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
               </div>
+
+              {/* ── PM date picker ── */}
               {f.walkin_status === 'PM' && (
-                <div className="form-group" style={{ flex: 1, minWidth: 160 }}>
-                  <label>Actual Walk-in Date *</label>
+                <div style={{ marginBottom: 10 }}>
+                  <label style={fieldLabel}>Actual Walk-in Date *</label>
                   <input
                     type="date"
-                    value={f.pm_date || ''}
                     max={today}
+                    value={f.pm_date || ''}
                     onChange={e => setF(r.id, 'pm_date', e.target.value)}
+                    style={{ ...fieldSelect }}
                   />
-                  <span className="form-hint">Select the actual date of the walk-in</span>
+                  <span className="form-hint" style={{ fontSize: 10, marginTop: 3, display: 'block' }}>Select the actual date of the walk-in</span>
                 </div>
               )}
-            </div>
-            <div style={{ display: 'flex', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
-              <div className="form-group" style={{ flex: 1, minWidth: 200 }}>
-                <label>Remarks <span style={{ color: 'var(--text3)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
-                <select value={f.remarks || ''} onChange={e => setF(r.id, 'remarks', e.target.value)}>
+
+              {/* ── Remarks ── */}
+              <div style={{ marginBottom: 10 }}>
+                <label style={fieldLabel}>
+                  Remarks <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, color: 'var(--text3)' }}>(optional)</span>
+                </label>
+                <select style={fieldSelect} value={f.remarks || ''} onChange={e => setF(r.id, 'remarks', e.target.value)}>
                   <option value="">— Select Remarks —</option>
                   {REMARKS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
+
+              {/* ── Grams Sold (conditional on Sold) ── */}
               {f.remarks === 'Sold' && (
-                <div className="form-group" style={{ flex: 1, minWidth: 150 }}>
-                  <label>Grams Sold *</label>
+                <div style={{ marginBottom: 10 }}>
+                  <label style={fieldLabel}>Grams Sold *</label>
                   <input
                     type="number" step="0.1" min="0"
+                    placeholder="e.g. 10.5"
                     value={f.grams_sold || ''}
                     onChange={e => setF(r.id, 'grams_sold', e.target.value)}
-                    placeholder="e.g. 10.5"
+                    style={{ ...fieldSelect }}
                   />
                 </div>
               )}
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <div className="form-group">
-                <label>Branch Manager Remarks <span style={{ color: 'var(--text3)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
+
+              {/* ── BM Remarks ── */}
+              <div style={{ marginBottom: 12 }}>
+                <label style={fieldLabel}>
+                  Branch Manager Remarks <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>(optional)</span>
+                </label>
                 <textarea
                   value={f.bm_remarks || ''}
                   onChange={e => setF(r.id, 'bm_remarks', e.target.value)}
                   placeholder="e.g. Customer not interested, will revisit next month…"
-                  style={{ minHeight: 60 }}
+                  style={{ ...fieldSelect, minHeight: 60, resize: 'vertical', fontFamily: 'inherit' }}
                 />
               </div>
+
+              {/* ── Lock & Save ── */}
+              <button
+                className="btn btn-success"
+                style={{ width: '100%', justifyContent: 'center', marginTop: 4 }}
+                onClick={() => lockLead(r.id)}
+                disabled={saving[r.id]}
+              >
+                {saving[r.id] ? <><Spinner /> Saving…</> : '🔒 Lock & Save'}
+              </button>
+
             </div>
-            <button className="btn btn-success" onClick={() => lockLead(r.id)} disabled={saving[r.id]}>
-              {saving[r.id] ? <><Spinner /> Saving…</> : '🔒 Lock & Save'}
-            </button>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }
