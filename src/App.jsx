@@ -127,13 +127,25 @@ export default function App() {
 
   async function handleLogout() {
     await supabase.auth.signOut()
+    sessionStorage.removeItem('goldtrack_active')
     setUser(null); setProfile(null); setBranches([]); setAgents([])
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) handleLogin(data.session.user, false)
-      else setLoading(false)
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (data.session) {
+        const keep   = localStorage.getItem('goldtrack_keep')
+        const active = sessionStorage.getItem('goldtrack_active')
+        // If user opted out of "keep me signed in" and this is a fresh browser session, sign them out
+        if (keep === '0' && !active) {
+          await supabase.auth.signOut()
+          setLoading(false)
+          return
+        }
+        handleLogin(data.session.user, false)
+      } else {
+        setLoading(false)
+      }
     })
   }, [])
 
