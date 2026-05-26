@@ -13,7 +13,6 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
   const [editing, setEditing] = useState(null)
   const [saving, setSaving]   = useState(false)
   const [deleting, setDeleting] = useState(null)
-  const [expanded, setExpanded] = useState(new Set())
 
   const isAdmin = profile?.role === 'admin'
 
@@ -36,14 +35,6 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
     const s = filter.search.toLowerCase()
     return r.customer_name?.toLowerCase().includes(s) || r.phone?.includes(s)
   })
-
-  function toggleExpand(id) {
-    setExpanded(prev => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
-  }
 
   function setE(k, v) { setEditing(e => ({ ...e, [k]: v })) }
 
@@ -79,7 +70,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
     setDeleting(null)
   }
 
-  const colSpan = isAdmin ? 10 : 9
+  const colCount = isAdmin ? 9 : 8
 
   return (
     <div>
@@ -104,147 +95,137 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
         <button className="btn btn-outline btn-sm" onClick={load}>↻ Refresh</button>
       </div>
 
-      <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8 }}>
-        Click any row to expand details (Gold, Grams Sold, BM Remarks, Submitted)
-      </div>
-
       {loading ? <Loading /> : (
         <div className="table-wrap" style={{ overflowX: 'hidden' }}>
           <table style={{ tableLayout: 'fixed', width: '100%', borderCollapse: 'collapse' }}>
             <colgroup>
-              <col style={{ width: '2.5%' }} />  {/* expand */}
-              <col style={{ width: '14%' }} />   {/* customer/phone */}
-              <col style={{ width: '10%' }} />   {/* branch */}
-              <col style={{ width: '12%' }} />   {/* type/agent */}
-              <col style={{ width: '10%' }} />   {/* source */}
-              <col style={{ width: '7%' }} />    {/* w-status */}
-              <col style={{ width: '10%' }} />   {/* remarks */}
-              <col style={{ width: '11%' }} />   {/* status */}
-              <col style={{ width: '9%' }} />    {/* w-in date */}
-              {isAdmin && <col style={{ width: '7%' }} />} {/* actions */}
+              <col style={{ width: '15%' }} />  {/* customer/phone */}
+              <col style={{ width: '11%' }} />  {/* branch */}
+              <col style={{ width: '12%' }} />  {/* type/agent */}
+              <col style={{ width: '12%' }} />  {/* source */}
+              <col style={{ width: '9%' }} />   {/* walk-in status */}
+              <col style={{ width: '11%' }} />  {/* remarks */}
+              <col style={{ width: '11%' }} />  {/* status */}
+              <col style={{ width: '11%' }} />  {/* walk-in date */}
+              {isAdmin && <col style={{ width: '8%' }} />} {/* actions */}
             </colgroup>
             <thead>
               <tr>
-                <th></th>
                 <th>Customer / Phone</th>
                 <th>Branch</th>
                 <th>Type / Agent</th>
-                <th>Source</th>
-                <th>W-Status</th>
+                <th>Lead Source</th>
+                <th>Walk-in Status</th>
                 <th>Remarks</th>
                 <th>Status</th>
-                <th>W-In Date</th>
+                <th>Walk-in Date</th>
                 {isAdmin && <th>Actions</th>}
               </tr>
             </thead>
             <tbody>
-              {filtered.map(r => {
-                const isExp = expanded.has(r.id)
-                return (
-                  <>
-                    <tr key={r.id}
-                      onClick={() => toggleExpand(r.id)}
-                      style={{ cursor: 'pointer' }}>
-                      {/* Expand toggle */}
-                      <td style={{ textAlign: 'center', color: 'var(--text3)', fontSize: 10, userSelect: 'none' }}>
-                        {isExp ? '▲' : '▼'}
-                      </td>
-                      {/* Customer + Phone stacked */}
-                      <td style={{ overflow: 'hidden' }}>
-                        <div style={{ fontWeight: 600, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                          title={r.customer_name}>{r.customer_name}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'DM Mono' }}>{r.phone}</div>
-                      </td>
-                      {/* Branch */}
-                      <td style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                        title={branchName(r.branch_id)}>{branchName(r.branch_id)}</td>
-                      {/* Type + Agent stacked */}
-                      <td style={{ overflow: 'hidden' }}>
-                        <div style={{ fontSize: 11 }}>
-                          {r.walk_in_type === 'tele_sales' ? '📞 Tele' : r.walk_in_type === 'direct' ? '⚡ Direct' : '—'}
-                        </div>
-                        <div style={{ fontSize: 11, color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                          title={r.assigned_agent_id ? agentName(r.assigned_agent_id) : ''}>
-                          {r.assigned_agent_id ? agentName(r.assigned_agent_id) : ''}
-                        </div>
-                      </td>
-                      {/* Lead Source */}
-                      <td style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                        title={displaySource(r.lead_source)}>{displaySource(r.lead_source)}</td>
-                      {/* Walk-in Status */}
+              {filtered.map(r => (
+                <>
+                  {/* ── Primary row ── */}
+                  <tr key={r.id}>
+                    {/* Customer + Phone stacked */}
+                    <td style={{ overflow: 'hidden' }}>
+                      <div style={{ fontWeight: 600, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        title={r.customer_name}>{r.customer_name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'DM Mono' }}>{r.phone}</div>
+                    </td>
+                    {/* Branch */}
+                    <td style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      title={branchName(r.branch_id)}>{branchName(r.branch_id)}</td>
+                    {/* Type + Agent stacked */}
+                    <td style={{ overflow: 'hidden' }}>
+                      <div style={{ fontSize: 11 }}>
+                        {r.walk_in_type === 'tele_sales' ? '📞 Tele Sales' : r.walk_in_type === 'direct' ? '⚡ Direct' : '—'}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        title={r.assigned_agent_id ? agentName(r.assigned_agent_id) : ''}>
+                        {r.assigned_agent_id ? agentName(r.assigned_agent_id) : ''}
+                      </div>
+                    </td>
+                    {/* Lead Source */}
+                    <td style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      title={displaySource(r.lead_source)}>{displaySource(r.lead_source)}</td>
+                    {/* Walk-in Status */}
+                    <td>
+                      {r.walkin_status
+                        ? <span style={{ fontWeight: 700, color: 'var(--blue)', fontSize: 12 }}>{r.walkin_status}</span>
+                        : <span style={{ color: 'var(--text3)' }}>—</span>}
+                    </td>
+                    {/* Remarks */}
+                    <td style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      title={r.remarks || ''}>{r.remarks || '—'}</td>
+                    {/* Status badge */}
+                    <td><StatusBadge status={r.status} /></td>
+                    {/* Walk-in Date */}
+                    <td style={{ fontSize: 11, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
+                      {r.visit_date || '—'}
+                    </td>
+                    {/* Admin actions */}
+                    {isAdmin && (
                       <td>
-                        {r.walkin_status
-                          ? <span style={{ fontWeight: 700, color: 'var(--blue)', fontSize: 12 }}>{r.walkin_status}</span>
-                          : <span style={{ color: 'var(--text3)' }}>—</span>}
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button className="btn btn-outline btn-sm"
+                            style={{ padding: '4px 8px' }}
+                            onClick={() => setEditing({ ...r })}>✏</button>
+                          <button className="btn btn-danger btn-sm"
+                            style={{ padding: '4px 8px' }}
+                            onClick={() => handleDelete(r)}
+                            disabled={deleting === r.id}>
+                            {deleting === r.id ? <Spinner /> : '🗑'}
+                          </button>
+                        </div>
                       </td>
-                      {/* Remarks */}
-                      <td style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                        title={r.remarks || ''}>{r.remarks || '—'}</td>
-                      {/* Status badge */}
-                      <td><StatusBadge status={r.status} /></td>
-                      {/* Walk-in Date */}
-                      <td style={{ fontSize: 11, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
-                        {r.visit_date || '—'}
-                      </td>
-                      {/* Admin actions */}
-                      {isAdmin && (
-                        <td onClick={e => e.stopPropagation()}>
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            <button className="btn btn-outline btn-sm"
-                              style={{ padding: '4px 8px' }}
-                              onClick={() => setEditing({ ...r })}>✏</button>
-                            <button className="btn btn-danger btn-sm"
-                              style={{ padding: '4px 8px' }}
-                              onClick={() => handleDelete(r)}
-                              disabled={deleting === r.id}>
-                              {deleting === r.id ? <Spinner /> : '🗑'}
-                            </button>
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-
-                    {/* Expanded detail row */}
-                    {isExp && (
-                      <tr key={`${r.id}-detail`} style={{ background: 'var(--surface)' }}>
-                        <td colSpan={colSpan} style={{ padding: '10px 20px 12px 40px', borderTop: '1px dashed var(--border)' }}>
-                          <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', fontSize: 12 }}>
-                            <div>
-                              <div style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 2 }}>Gold / Grams</div>
-                              <div style={{ fontWeight: 500 }}>{r.gold_type} · {r.grams}g</div>
-                            </div>
-                            {r.grams_sold != null && (
-                              <div>
-                                <div style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 2 }}>Grams Sold</div>
-                                <div style={{ fontWeight: 600, color: 'var(--green)' }}>{r.grams_sold}g</div>
-                              </div>
-                            )}
-                            <div>
-                              <div style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 2 }}>Submitted</div>
-                              <div>{fmt(r.created_at)}</div>
-                            </div>
-                            {r.rejection_reason && (
-                              <div>
-                                <div style={{ fontSize: 10, color: 'var(--red)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 2 }}>Rejection Reason</div>
-                                <div style={{ color: 'var(--red)' }}>{r.rejection_reason}</div>
-                              </div>
-                            )}
-                            {r.bm_remarks && (
-                              <div style={{ flex: 1, minWidth: 200 }}>
-                                <div style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 2 }}>BM Remarks</div>
-                                <div style={{ color: 'var(--text2)' }}>{r.bm_remarks}</div>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
                     )}
-                  </>
-                )
-              })}
+                  </tr>
+
+                  {/* ── Secondary info row — always visible ── */}
+                  <tr key={`${r.id}-info`} style={{ background: 'var(--surface)' }}>
+                    <td colSpan={colCount}
+                      style={{ padding: '5px 14px 8px 14px', borderBottom: '2px solid var(--border)' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px 28px', fontSize: 11, color: 'var(--text2)' }}>
+                        {/* Gold / Grams */}
+                        <span>
+                          <span style={{ color: 'var(--text3)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.04em' }}>Gold: </span>
+                          <strong style={{ color: 'var(--text1)' }}>{r.gold_type || '—'} · {r.grams ? `${r.grams}g` : '—'}</strong>
+                        </span>
+                        {/* Grams Sold */}
+                        {r.grams_sold != null && (
+                          <span>
+                            <span style={{ color: 'var(--text3)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.04em' }}>Grams Sold: </span>
+                            <strong style={{ color: 'var(--green)' }}>{r.grams_sold}g</strong>
+                          </span>
+                        )}
+                        {/* Submitted */}
+                        <span>
+                          <span style={{ color: 'var(--text3)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.04em' }}>Submitted: </span>
+                          {fmt(r.created_at)}
+                        </span>
+                        {/* Rejection Reason */}
+                        {r.rejection_reason && (
+                          <span>
+                            <span style={{ color: 'var(--red)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.04em' }}>Rejection: </span>
+                            <span style={{ color: 'var(--red)' }}>{r.rejection_reason}</span>
+                          </span>
+                        )}
+                        {/* BM Remarks */}
+                        {r.bm_remarks && (
+                          <span style={{ flex: 1, minWidth: 180 }}>
+                            <span style={{ color: 'var(--text3)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.04em' }}>BM Remarks: </span>
+                            {r.bm_remarks}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                </>
+              ))}
               {!filtered.length && (
                 <tr>
-                  <td colSpan={colSpan} style={{ textAlign: 'center', padding: 40, color: 'var(--text3)' }}>
+                  <td colSpan={colCount} style={{ textAlign: 'center', padding: 40, color: 'var(--text3)' }}>
                     No records found.
                   </td>
                 </tr>
