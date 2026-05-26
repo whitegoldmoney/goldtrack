@@ -86,8 +86,7 @@ export default function AllWalkIns({ branches, agents, profile, toast, tls = [] 
     setDeleting(null)
   }
 
-  // +1 for Team column
-  const colCount = canEdit ? 14 : 13
+  const colCount = canEdit ? 13 : 12
 
   return (
     <div>
@@ -121,24 +120,23 @@ export default function AllWalkIns({ branches, agents, profile, toast, tls = [] 
       </div>
 
       {loading ? <Loading /> : (
-        <div className="table-wrap table-admin" style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="table-wrap table-admin">
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <thead>
               <tr>
-                <th style={{ minWidth: 180 }}>Customer / Phone</th>
-                <th style={{ minWidth: 120 }}>Alt Phone</th>
-                <th style={{ minWidth: 150 }}>Branch</th>
-                <th style={{ minWidth: 160 }}>Type / Agent</th>
-                <th style={{ minWidth: 120 }}>Team</th>
-                <th style={{ minWidth: 130 }}>Lead Source</th>
-                <th style={{ minWidth: 120 }}>Walk-in Status</th>
-                <th style={{ minWidth: 150 }}>Remarks</th>
-                <th style={{ minWidth: 130 }}>Status</th>
-                <th style={{ minWidth: 130 }}>Walk-in Date</th>
-                <th style={{ minWidth: 130 }}>Gold / Grams</th>
-                <th style={{ minWidth: 110 }}>Grams Sold</th>
-                <th style={{ minWidth: 160 }}>Submitted</th>
-                {canEdit && <th style={{ minWidth: 100 }}>Actions</th>}
+                <th style={{ width: 130 }}>Customer / Phone</th>
+                <th style={{ width: 80 }}>Alt Phone</th>
+                <th style={{ width: 100 }}>Branch</th>
+                <th style={{ width: 110 }}>Type / Agent</th>
+                <th style={{ width: 90 }}>Lead Source</th>
+                <th style={{ width: 75 }}>Walk-in Status</th>
+                <th style={{ width: 95 }}>Remarks</th>
+                <th style={{ width: 95 }}>Status</th>
+                <th style={{ width: 88 }}>Walk-in Date</th>
+                <th style={{ width: 78 }}>Gold / Grams</th>
+                <th style={{ width: 65 }}>Grams Sold</th>
+                <th style={{ width: 88 }}>Submitted</th>
+                {canEdit && <th style={{ width: 50 }}>Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -153,12 +151,11 @@ export default function AllWalkIns({ branches, agents, profile, toast, tls = [] 
                       <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'DM Mono' }}>{r.phone}</div>
                     </td>
                     {/* Alt Phone */}
-                    <td style={{ fontFamily: 'DM Mono', fontSize: 11, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
+                    <td style={{ fontFamily: 'DM Mono', color: 'var(--text2)' }}>
                       {r.alternate_phone || '—'}
                     </td>
                     {/* Branch */}
-                    <td style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                      title={branchName(r.branch_id)}>{branchName(r.branch_id)}</td>
+                    <td title={branchName(r.branch_id)}>{branchName(r.branch_id)}</td>
                     {/* Type + Agent stacked */}
                     <td style={{ overflow: 'hidden' }}>
                       <div style={{ fontSize: 11 }}>
@@ -171,47 +168,33 @@ export default function AllWalkIns({ branches, agents, profile, toast, tls = [] 
                           : r.assigned_agent_id ? agentName(r.assigned_agent_id) : ''}
                       </div>
                     </td>
-                    {/* Team label */}
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      {teamLabel(r.submitted_by) !== '—'
-                        ? <span style={{ fontSize: 11, background: 'rgba(201,168,76,0.10)', color: 'var(--gold)', borderRadius: 4, padding: '2px 6px', fontWeight: 600 }}>
-                            {teamLabel(r.submitted_by)}
-                          </span>
-                        : <span style={{ color: 'var(--text3)', fontSize: 11 }}>—</span>}
-                    </td>
                     {/* Lead Source */}
-                    <td style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                      title={displaySource(r.lead_source)}>{displaySource(r.lead_source)}</td>
+                    <td title={displaySource(r.lead_source)}>{displaySource(r.lead_source)}</td>
                     {/* Walk-in Status */}
                     <td>
                       {r.walkin_status
-                        ? <span style={{ fontWeight: 700, color: 'var(--blue)', fontSize: 12 }}>{r.walkin_status}</span>
+                        ? <span style={{ fontWeight: 700, color: 'var(--blue)' }}>{r.walkin_status}</span>
                         : <span style={{ color: 'var(--text3)' }}>—</span>}
                     </td>
                     {/* Remarks */}
-                    <td style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                      title={r.remarks || ''}>{r.remarks || '—'}</td>
+                    <td title={r.remarks || ''}>{r.remarks || '—'}</td>
                     {/* Status badge */}
                     <td><StatusBadge status={r.status} /></td>
                     {/* Walk-in Date */}
-                    <td style={{ fontSize: 13, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
-                      {r.visit_date || '—'}
-                    </td>
+                    <td style={{ color: 'var(--text2)' }}>{r.visit_date || '—'}</td>
                     {/* Gold / Grams */}
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <div style={{ fontSize: 13, fontWeight: 500 }}>{r.gold_type || '—'}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'DM Mono' }}>{r.grams ? `${r.grams}g` : '—'}</div>
+                    <td>
+                      <div style={{ fontWeight: 500 }}>{r.gold_type || '—'}</div>
+                      <div style={{ color: 'var(--text3)', fontFamily: 'DM Mono' }}>{r.grams ? `${r.grams}g` : '—'}</div>
                     </td>
                     {/* Grams Sold */}
-                    <td style={{ fontFamily: 'DM Mono', fontSize: 13, whiteSpace: 'nowrap' }}>
+                    <td style={{ fontFamily: 'DM Mono' }}>
                       {r.grams_sold != null
                         ? <span style={{ color: 'var(--green)', fontWeight: 600 }}>{r.grams_sold}g</span>
                         : <span style={{ color: 'var(--text3)' }}>—</span>}
                     </td>
                     {/* Submitted */}
-                    <td style={{ fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
-                      {fmt(r.created_at)}
-                    </td>
+                    <td style={{ color: 'var(--text2)' }}>{fmt(r.created_at)}</td>
                     {/* Actions — edit for TL+admin, delete for admin only */}
                     {canEdit && (
                       <td>
