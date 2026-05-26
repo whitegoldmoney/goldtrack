@@ -63,8 +63,10 @@ export default function NewWalkIn({ profile, branches, toast, onDraftSaved }) {
   }
 
   return (
-    <div>
-      <div className="card">
+    <div style={{ maxWidth: 800, margin: '0 auto' }}>
+
+      {/* Smart Paste card */}
+      <div className="card" style={{ padding: 20 }}>
         <div className="card-header">
           <div>
             <div className="card-title">📋 Smart Paste from WhatsApp</div>
@@ -73,8 +75,12 @@ export default function NewWalkIn({ profile, branches, toast, onDraftSaved }) {
         </div>
         <div className="form-group">
           <label>WhatsApp Message</label>
-          <textarea value={paste} onChange={e => setPaste(e.target.value)}
-            placeholder="Ravi Kumar, 9876543210, Physical, 10.5g" />
+          <textarea
+            value={paste}
+            onChange={e => setPaste(e.target.value)}
+            placeholder="Ravi Kumar, 9876543210, Physical, 10.5g"
+            style={{ minHeight: 'unset', maxHeight: 80, resize: 'none' }}
+          />
           <span className="form-hint">Format: Customer Name, Phone, Gold Type (Physical/Release), Grams</span>
         </div>
         <button className="btn btn-outline" style={{ marginTop: 8 }} onClick={handleParse} disabled={!paste.trim()}>
@@ -82,14 +88,16 @@ export default function NewWalkIn({ profile, branches, toast, onDraftSaved }) {
         </button>
       </div>
 
-      <div className="card">
+      {/* Walk-in Details card */}
+      <div className="card" style={{ padding: 20 }}>
         <div className="card-header">
           <div className="card-title">
             Walk-in Details
             {parsed && <span style={{ color: 'var(--green)', fontSize: 12, fontWeight: 500, marginLeft: 8 }}>✓ Auto-filled</span>}
           </div>
         </div>
-        <div className="form-grid">
+
+        <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
           <div className="form-group">
             <label>Customer Name *</label>
             <input value={form.customer_name} onChange={e => setForm(f => ({ ...f, customer_name: e.target.value }))} placeholder="Full name" />
@@ -121,7 +129,9 @@ export default function NewWalkIn({ profile, branches, toast, onDraftSaved }) {
             <input type="date" value={form.visit_date} onChange={e => setForm(f => ({ ...f, visit_date: e.target.value }))} />
           </div>
         </div>
+
         <hr className="section-sep" />
+
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           <button className="btn btn-primary" onClick={handleSubmit} disabled={loading || loadingDraft}>
             {loading ? <><Spinner dark /> Submitting…</> : '🚀 Submit Walk-in'}
@@ -132,6 +142,7 @@ export default function NewWalkIn({ profile, branches, toast, onDraftSaved }) {
           <span style={{ fontSize: 12, color: 'var(--text3)' }}>Hold saves a draft — not sent to TL yet</span>
         </div>
       </div>
+
     </div>
   )
 }
