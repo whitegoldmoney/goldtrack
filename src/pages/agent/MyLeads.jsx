@@ -18,6 +18,16 @@ const WALKIN_STATUS = [
   { value: 'PM', label: 'PM — Previous Month' },
 ]
 
+const REMARKS_OPTIONS = [
+  'Taken Quotation',
+  'Price Enquiry',
+  'Price Issue',
+  'Verification Failed',
+  'Sold',
+  'KYC Failed',
+  'Release Loss',
+]
+
 const today = new Date().toISOString().split('T')[0]
 
 export default function MyLeads({ profile, branches, toast }) {
@@ -49,6 +59,7 @@ export default function MyLeads({ profile, branches, toast }) {
       lead_source: f.lead_source,
       walkin_status: f.walkin_status,
       status: 'completed',
+      remarks: f.remarks || null,
       ...(f.walkin_status === 'PM' && f.pm_date ? { visit_date: f.pm_date } : {})
     }
     const { error } = await supabase.from('walk_ins')
@@ -103,6 +114,15 @@ export default function MyLeads({ profile, branches, toast }) {
                   <span className="form-hint">Select the actual date of the walk-in</span>
                 </div>
               )}
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <div className="form-group">
+                <label>Remarks <span style={{ color: 'var(--text3)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
+                <select value={f.remarks || ''} onChange={e => setF(r.id, 'remarks', e.target.value)}>
+                  <option value="">— Select Remarks —</option>
+                  {REMARKS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
             </div>
             <button className="btn btn-success" onClick={() => lockLead(r.id)} disabled={saving[r.id]}>
               {saving[r.id] ? <><Spinner /> Saving…</> : '🔒 Lock & Save'}
