@@ -55,11 +55,14 @@ export default function MyLeads({ profile, branches, toast }) {
     if (!f.walkin_status) { toast('Select a walk-in status.', 'error'); return }
     if (f.walkin_status === 'PM' && !f.pm_date) { toast('Select the walk-in date for Previous Month.', 'error'); return }
     setSaving(s => ({ ...s, [id]: true }))
+    if (f.remarks === 'Sold' && !f.grams_sold) { toast('Enter how many grams were sold.', 'error'); return }
     const updates = {
       lead_source: f.lead_source,
       walkin_status: f.walkin_status,
       status: 'completed',
       remarks: f.remarks || null,
+      grams_sold: f.remarks === 'Sold' ? parseFloat(f.grams_sold) : null,
+      bm_remarks: f.bm_remarks || null,
       ...(f.walkin_status === 'PM' && f.pm_date ? { visit_date: f.pm_date } : {})
     }
     const { error } = await supabase.from('walk_ins')
@@ -115,13 +118,35 @@ export default function MyLeads({ profile, branches, toast }) {
                 </div>
               )}
             </div>
-            <div style={{ marginBottom: 14 }}>
-              <div className="form-group">
+            <div style={{ display: 'flex', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
+              <div className="form-group" style={{ flex: 1, minWidth: 200 }}>
                 <label>Remarks <span style={{ color: 'var(--text3)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
                 <select value={f.remarks || ''} onChange={e => setF(r.id, 'remarks', e.target.value)}>
                   <option value="">— Select Remarks —</option>
                   {REMARKS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
+              </div>
+              {f.remarks === 'Sold' && (
+                <div className="form-group" style={{ flex: 1, minWidth: 150 }}>
+                  <label>Grams Sold *</label>
+                  <input
+                    type="number" step="0.1" min="0"
+                    value={f.grams_sold || ''}
+                    onChange={e => setF(r.id, 'grams_sold', e.target.value)}
+                    placeholder="e.g. 10.5"
+                  />
+                </div>
+              )}
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <div className="form-group">
+                <label>Branch Manager Remarks <span style={{ color: 'var(--text3)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
+                <textarea
+                  value={f.bm_remarks || ''}
+                  onChange={e => setF(r.id, 'bm_remarks', e.target.value)}
+                  placeholder="e.g. Customer not interested, will revisit next month…"
+                  style={{ minHeight: 60 }}
+                />
               </div>
             </div>
             <button className="btn btn-success" onClick={() => lockLead(r.id)} disabled={saving[r.id]}>

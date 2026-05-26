@@ -41,7 +41,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
 
   async function handleSave() {
     const { id, customer_name, phone, gold_type, grams, branch_id, visit_date,
-      status, walk_in_type, assigned_agent_id, rejection_reason, remarks, bm_remarks } = editing
+      status, walk_in_type, assigned_agent_id, rejection_reason, remarks, grams_sold, bm_remarks } = editing
     if (!customer_name || !phone || !grams || !branch_id) {
       toast('Fill all required fields.', 'error'); return
     }
@@ -58,6 +58,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
       assigned_agent_id: assigned_agent_id || null,
       rejection_reason: rejection_reason || null,
       remarks: remarks || null,
+      grams_sold: grams_sold ? parseFloat(grams_sold) : null,
       bm_remarks: bm_remarks || null,
     }).eq('id', id)
     if (error) toast(error.message, 'error')
@@ -101,7 +102,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
           <table>
             <thead><tr>
               <th>Customer</th><th>Phone</th><th>Gold</th><th>Grams</th><th>Branch</th>
-              <th>Type</th><th>Agent</th><th>Lead Source</th><th>Walk-in Status</th><th>Remarks</th><th>BM Remarks</th><th>Status</th><th>Walk-in Date</th><th>Submitted</th>
+              <th>Type</th><th>Agent</th><th>Lead Source</th><th>Walk-in Status</th><th>Remarks</th><th>Grams Sold</th><th>BM Remarks</th><th>Status</th><th>Walk-in Date</th><th>Submitted</th>
               {isAdmin && <th>Actions</th>}
             </tr></thead>
             <tbody>
@@ -120,6 +121,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
                     : '—'}
                   </td>
                   <td style={{ fontSize: 12 }}>{r.remarks || '—'}</td>
+                  <td style={{ fontSize: 12 }}>{r.grams_sold != null ? `${r.grams_sold}g` : '—'}</td>
                   <td style={{ fontSize: 12, maxWidth: 160, color: 'var(--text2)' }}>{r.bm_remarks || '—'}</td>
                   <td><StatusBadge status={r.status} /></td>
                   <td style={{ fontSize: 12, color: 'var(--text2)' }}>{r.visit_date || '—'}</td>
@@ -137,7 +139,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
                 </tr>
               ))}
               {!filtered.length && (
-                <tr><td colSpan={isAdmin ? 15 : 14} style={{ textAlign: 'center', padding: 32, color: 'var(--text3)' }}>No records found.</td></tr>
+                <tr><td colSpan={isAdmin ? 16 : 15} style={{ textAlign: 'center', padding: 32, color: 'var(--text3)' }}>No records found.</td></tr>
               )}
             </tbody>
           </table>
@@ -229,7 +231,16 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
                     ))}
                   </select>
                 </div>
-                <div className="form-group">
+                {editing.remarks === 'Sold' && (
+                  <div className="form-group">
+                    <label>Grams Sold</label>
+                    <input type="number" step="0.1" min="0"
+                      value={editing.grams_sold || ''}
+                      onChange={e => setE('grams_sold', e.target.value)}
+                      placeholder="e.g. 10.5" />
+                  </div>
+                )}
+                <div className="form-group full">
                   <label>Branch Manager Remarks</label>
                   <textarea value={editing.bm_remarks || ''} onChange={e => setE('bm_remarks', e.target.value)} placeholder="e.g. Customer not interested…" style={{ minHeight: 60 }} />
                 </div>
