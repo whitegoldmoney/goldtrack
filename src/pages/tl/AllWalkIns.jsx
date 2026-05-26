@@ -6,38 +6,46 @@ import { StatusBadge, Loading, Spinner } from '../../components/UI'
 const srcLabel = { today: 'Today', this_month: 'This Month', previous_month: 'Prev Month' }
 const displaySource = s => srcLabel[s] || s || '—'
 
-export default function AllWalkIns({ branches, agents, profile, toast, teamAgentIds }) {
-  const [rows, setRows]       = useState([])
-  const [loading, setLoading] = useState(true)
-  const [filter, setFilter]   = useState({ status: '', type: '', date: '', search: '' })
-  const [editing, setEditing] = useState(null)
-  const [saving, setSaving]   = useState(false)
+export default function AllWalkIns({ branches, agents, profile, toast, tls = [] }) {
+  const [rows, setRows]         = useState([])
+  const [loading, setLoading]   = useState(true)
+  const [filter, setFilter]     = useState({ status: '', type: '', date: '', search: '', team: '' })
+  const [editing, setEditing]   = useState(null)
+  const [saving, setSaving]     = useState(false)
   const [deleting, setDeleting] = useState(null)
-  const [showAll, setShowAll] = useState(false)
 
   const canEdit   = profile?.role === 'admin' || profile?.role === 'tl'
   const canDelete = profile?.role === 'admin'
-  const isTL      = profile?.role === 'tl'
 
   async function load() {
     setLoading(true)
-    if (teamAgentIds !== null && !showAll && teamAgentIds.length === 0) {
-      setRows([]); setLoading(false); return
-    }
+    // No team filter — fetch ALL walk-ins for both TLs
     let q = supabase.from('walk_ins').select('*').neq('status', 'draft').order('created_at', { ascending: false }).limit(500)
-    if (teamAgentIds !== null && !showAll) q = q.in('submitted_by', teamAgentIds)
     if (filter.status) q = q.eq('status', filter.status)
     if (filter.type)   q = q.eq('walk_in_type', filter.type)
     if (filter.date)   q = q.eq('visit_date', filter.date)
     const { data } = await q
     setRows(data || []); setLoading(false)
   }
-  useEffect(() => { load() }, [filter.status, filter.type, filter.date, showAll])
+  useEffect(() => { load() }, [filter.status, filter.type, filter.date])
 
   const branchName = id => (branches.find(b => b.id === id) || {}).name || '—'
   const agentName  = id => (agents.find(a => a.id === id) || {}).name  || '—'
 
+  // Returns "Pallavi's Team" / "Akash's Team" etc. based on the submitting agent's assigned_tl
+  const teamLabel = submittedById => {
+    const agent = agents.find(a => a.id === submittedById)
+    if (!agent?.assigned_tl) return '—'
+    const tl = tls.find(t => t.id === agent.assigned_tl)
+    return tl ? `${tl.name.split(' ')[0]}'s Team` : '—'
+  }
+
+  // Client-side filtering: team filter + search
   const filtered = rows.filter(r => {
+    if (filter.team) {
+      const agent = agents.find(a => a.id === r.submitted_by)
+      if ((agent?.assigned_tl || '') !== filter.team) return false
+    }
     if (!filter.search) return true
     const s = filter.search.toLowerCase()
     return r.customer_name?.toLowerCase().includes(s) || r.phone?.includes(s)
@@ -78,11 +86,12 @@ export default function AllWalkIns({ branches, agents, profile, toast, teamAgent
     setDeleting(null)
   }
 
-  const colCount = canEdit ? 13 : 12
+  // +1 for Team column
+  const colCount = canEdit ? 14 : 13
 
   return (
     <div>
-      {/* Filter bar */}
+      {/* ── Filter bar ── */}
       <div className="filter-bar">
         <input placeholder="Search name / phone…" value={filter.search}
           onChange={e => setFilter(f => ({ ...f, search: e.target.value }))} />
@@ -99,14 +108,15 @@ export default function AllWalkIns({ branches, agents, profile, toast, teamAgent
           <option value="tele_sales">Tele Sales</option>
           <option value="direct">Direct</option>
         </select>
+        {/* Team filter dropdown — shows all TLs */}
+        <select value={filter.team} onChange={e => setFilter(f => ({ ...f, team: e.target.value }))}>
+          <option value="">All Teams</option>
+          {tls.map(t => (
+            <option key={t.id} value={t.id}>{t.name.split(' ')[0]}'s Team</option>
+          ))}
+        </select>
         <input type="date" value={filter.date} onChange={e => setFilter(f => ({ ...f, date: e.target.value }))} />
         <button className="btn btn-outline btn-sm" onClick={load}>↻ Refresh</button>
-        {isTL && (
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text2)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            <input type="checkbox" checked={showAll} onChange={e => setShowAll(e.target.checked)} />
-            Show all walk-ins
-          </label>
-        )}
       </div>
 
       {loading ? <Loading /> : (
@@ -118,6 +128,7 @@ export default function AllWalkIns({ branches, agents, profile, toast, teamAgent
                 <th style={{ minWidth: 120 }}>Alt Phone</th>
                 <th style={{ minWidth: 150 }}>Branch</th>
                 <th style={{ minWidth: 160 }}>Type / Agent</th>
+                <th style={{ minWidth: 120 }}>Team</th>
                 <th style={{ minWidth: 130 }}>Lead Source</th>
                 <th style={{ minWidth: 120 }}>Walk-in Status</th>
                 <th style={{ minWidth: 150 }}>Remarks</th>
@@ -156,6 +167,14 @@ export default function AllWalkIns({ branches, agents, profile, toast, teamAgent
                         title={r.assigned_agent_id ? agentName(r.assigned_agent_id) : ''}>
                         {r.assigned_agent_id ? agentName(r.assigned_agent_id) : ''}
                       </div>
+                    </td>
+                    {/* Team label */}
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      {teamLabel(r.submitted_by) !== '—'
+                        ? <span style={{ fontSize: 11, background: 'rgba(201,168,76,0.10)', color: 'var(--gold)', borderRadius: 4, padding: '2px 6px', fontWeight: 600 }}>
+                            {teamLabel(r.submitted_by)}
+                          </span>
+                        : <span style={{ color: 'var(--text3)', fontSize: 11 }}>—</span>}
                     </td>
                     {/* Lead Source */}
                     <td style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}

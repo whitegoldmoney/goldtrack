@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { fmt } from '../../lib/utils'
 import { Loading, Empty } from '../../components/UI'
 
-export default function AgentHolds({ agents, branches, toast, profile, teamAgentIds }) {
+export default function AgentHolds({ agents, branches, toast, profile, tls = [] }) {
   const [rows, setRows]         = useState([])
   const [loading, setLoading]   = useState(true)
   const [expanded, setExpanded] = useState({})
@@ -12,12 +12,9 @@ export default function AgentHolds({ agents, branches, toast, profile, teamAgent
 
   async function load() {
     setLoading(true)
-    if (teamAgentIds !== null && teamAgentIds.length === 0) {
-      setRows([]); setLoading(false); return
-    }
-    let q = supabase.from('walk_ins').select('*').eq('status', 'draft').order('created_at', { ascending: false })
-    if (teamAgentIds !== null) q = q.in('submitted_by', teamAgentIds)
-    const { data } = await q
+    // No team filter — both TLs see all holds from all agents
+    const { data } = await supabase
+      .from('walk_ins').select('*').eq('status', 'draft').order('created_at', { ascending: false })
     setRows(data || [])
     setLoading(false)
   }
@@ -29,6 +26,12 @@ export default function AgentHolds({ agents, branches, toast, profile, teamAgent
 
   const agentName  = id => (agents.find(a => a.id === id) || {}).name || 'Unknown Agent'
   const branchName = id => (branches.find(b => b.id === id) || {}).name || '—'
+  const agentTeam  = agentId => {
+    const agent = agents.find(a => a.id === agentId)
+    if (!agent?.assigned_tl) return null
+    const tl = tls.find(t => t.id === agent.assigned_tl)
+    return tl ? `${tl.name.split(' ')[0]}'s Team` : null
+  }
 
   // Group by submitted_by, sort most holds first
   const grouped = rows.reduce((acc, row) => {
@@ -118,8 +121,13 @@ export default function AgentHolds({ agents, branches, toast, profile, teamAgent
                 </div>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 14 }}>{agentName(aid)}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
+                  <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
                     {count} walk-in{count !== 1 ? 's' : ''} on hold
+                    {agentTeam(aid) && (
+                      <span style={{ background: 'rgba(201,168,76,0.12)', color: 'var(--gold)', borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 600 }}>
+                        {agentTeam(aid)}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

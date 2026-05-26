@@ -60,7 +60,11 @@ export default function PendingApprovals({ profile, branches, agents, toast, onA
   const agentName  = id => (agents.find(a => a.id === id) || {}).name || 'Unknown'
 
   if (loading) return <Loading />
-  if (!rows.length) return <Empty icon="✅" text="No pending walk-ins. All caught up!" />
+  if (!rows.length) {
+    return teamAgentIds !== null && teamAgentIds.length === 0
+      ? <Empty icon="👥" text="No agents assigned to your team yet." />
+      : <Empty icon="✅" text="No pending walk-ins. All caught up!" />
+  }
 
   return (
     <div>
