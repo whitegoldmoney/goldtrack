@@ -98,38 +98,35 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
       </div>
 
       {loading ? <Loading /> : (
-        <div className="table-wrap">
+        <div className="table-wrap table-compact">
           <table>
             <thead><tr>
               <th>Customer</th><th>Phone</th><th>Gold</th><th>Grams</th><th>Branch</th>
-              <th>Type</th><th>Agent</th><th>Lead Source</th><th>Walk-in Status</th><th>Remarks</th><th>Grams Sold</th><th>BM Remarks</th><th>Status</th><th>Walk-in Date</th><th>Submitted</th>
+              <th>Type</th><th>Agent</th><th>Source</th><th>W-Status</th><th>Remarks</th><th>Sold(g)</th><th>BM Remarks</th><th>Status</th><th>W-In Date</th><th>Submitted</th>
               {isAdmin && <th>Actions</th>}
             </tr></thead>
             <tbody>
               {filtered.map(r => (
                 <tr key={r.id}>
-                  <td className="td-name">{r.customer_name}</td>
+                  <td className="td-name" title={r.customer_name}>{r.customer_name}</td>
                   <td className="td-phone">{r.phone}</td>
-                  <td style={{ fontSize: 12 }}>{r.gold_type}</td>
+                  <td>{r.gold_type}</td>
                   <td className="td-grams">{r.grams}g</td>
-                  <td style={{ fontSize: 12 }}>{branchName(r.branch_id)}</td>
-                  <td style={{ fontSize: 12 }}>{r.walk_in_type === 'tele_sales' ? '📞 Tele' : r.walk_in_type === 'direct' ? '⚡ Direct' : '—'}</td>
-                  <td style={{ fontSize: 12 }}>{r.assigned_agent_id ? agentName(r.assigned_agent_id) : '—'}</td>
-                  <td style={{ fontSize: 12 }}>{displaySource(r.lead_source)}</td>
-                  <td style={{ fontSize: 12 }}>{r.walkin_status
-                    ? <span style={{ fontWeight: 600, color: 'var(--blue)' }}>{r.walkin_status}</span>
-                    : '—'}
-                  </td>
-                  <td style={{ fontSize: 12 }}>{r.remarks || '—'}</td>
-                  <td style={{ fontSize: 12 }}>{r.grams_sold != null ? `${r.grams_sold}g` : '—'}</td>
-                  <td style={{ fontSize: 12, maxWidth: 160, color: 'var(--text2)' }}>{r.bm_remarks || '—'}</td>
+                  <td className="td-truncate" title={branchName(r.branch_id)}>{branchName(r.branch_id)}</td>
+                  <td>{r.walk_in_type === 'tele_sales' ? '📞 Tele' : r.walk_in_type === 'direct' ? '⚡ Direct' : '—'}</td>
+                  <td className="td-truncate" title={r.assigned_agent_id ? agentName(r.assigned_agent_id) : ''}>{r.assigned_agent_id ? agentName(r.assigned_agent_id) : '—'}</td>
+                  <td className="td-truncate" title={displaySource(r.lead_source)}>{displaySource(r.lead_source)}</td>
+                  <td>{r.walkin_status ? <span style={{ fontWeight: 700, color: 'var(--blue)' }}>{r.walkin_status}</span> : '—'}</td>
+                  <td className="td-truncate" title={r.remarks || ''}>{r.remarks || '—'}</td>
+                  <td>{r.grams_sold != null ? `${r.grams_sold}g` : '—'}</td>
+                  <td className="td-truncate" title={r.bm_remarks || ''}>{r.bm_remarks || '—'}</td>
                   <td><StatusBadge status={r.status} /></td>
-                  <td style={{ fontSize: 12, color: 'var(--text2)' }}>{r.visit_date || '—'}</td>
-                  <td style={{ fontSize: 11, color: 'var(--text3)' }}>{fmt(r.created_at)}</td>
+                  <td style={{ color: 'var(--text2)', whiteSpace: 'nowrap' }}>{r.visit_date || '—'}</td>
+                  <td style={{ color: 'var(--text3)', whiteSpace: 'nowrap' }}>{fmt(r.created_at)}</td>
                   {isAdmin && (
                     <td>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-outline btn-sm" onClick={() => setEditing({ ...r })}>✏ Edit</button>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button className="btn btn-outline btn-sm" onClick={() => setEditing({ ...r })}>✏</button>
                         <button className="btn btn-danger btn-sm" onClick={() => handleDelete(r)} disabled={deleting === r.id}>
                           {deleting === r.id ? <Spinner /> : '🗑'}
                         </button>

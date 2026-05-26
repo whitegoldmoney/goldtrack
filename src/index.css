@@ -69,6 +69,12 @@ tbody tr{border-bottom:1px solid var(--border)}
 tbody tr:last-child{border-bottom:none}
 tbody tr:hover{background:var(--surface)}
 tbody td{padding:11px 14px;vertical-align:middle}
+.table-compact table{font-size:11px}
+.table-compact thead th{padding:6px 8px;font-size:10px;white-space:nowrap}
+.table-compact tbody td{padding:7px 8px}
+.table-compact .td-name{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.table-compact .td-phone{font-size:11px}
+.td-truncate{max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default}
 .td-name{font-weight:500}
 .td-phone{font-family:'DM Mono',monospace;font-size:12px;color:var(--text2)}
 .td-grams{font-family:'DM Mono',monospace}
