@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { fmt } from '../../lib/utils'
 import { Loading, Empty } from '../../components/UI'
 
-export default function AgentHolds({ agents, branches, toast }) {
-  const [rows, setRows]       = useState([])
-  const [loading, setLoading] = useState(true)
+export default function AgentHolds({ agents, branches, toast, profile }) {
+  const [rows, setRows]         = useState([])
+  const [loading, setLoading]   = useState(true)
   const [expanded, setExpanded] = useState({})
+  const [cooldowns, setCooldowns] = useState({})   // { agentId: secondsRemaining }
+  const timers = useRef({})                         // { agentId: intervalId }
 
   async function load() {
     setLoading(true)
@@ -19,7 +21,10 @@ export default function AgentHolds({ agents, branches, toast }) {
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    return () => Object.values(timers.current).forEach(clearInterval)
+  }, [])
 
   const agentName  = id => (agents.find(a => a.id === id) || {}).name || 'Unknown Agent'
   const branchName = id => (branches.find(b => b.id === id) || {}).name || '—'
@@ -37,8 +42,30 @@ export default function AgentHolds({ agents, branches, toast }) {
     setExpanded(e => ({ ...e, [id]: !e[id] }))
   }
 
-  function nudge(aid) {
-    toast(`Reminder sent to ${agentName(aid)}`, 'success')
+  async function nudge(aid) {
+    if (cooldowns[aid] > 0) return
+
+    const { error } = await supabase.from('nudges').insert({
+      agent_id: aid,
+      sent_by: profile.id,
+      message: 'Your TL wants you to follow up on your held walk-ins!'
+    })
+    if (error) { toast(error.message, 'error'); return }
+    toast(`Nudge sent to ${agentName(aid)}! 📞`, 'success')
+
+    // Start 30-second cooldown
+    setCooldowns(c => ({ ...c, [aid]: 30 }))
+    timers.current[aid] = setInterval(() => {
+      setCooldowns(c => {
+        const remaining = (c[aid] || 0) - 1
+        if (remaining <= 0) {
+          clearInterval(timers.current[aid])
+          const { [aid]: _, ...rest } = c
+          return rest
+        }
+        return { ...c, [aid]: remaining }
+      })
+    }, 1000)
   }
 
   if (loading) return <Loading />
@@ -58,9 +85,11 @@ export default function AgentHolds({ agents, branches, toast }) {
       </div>
 
       {agentIds.map(aid => {
-        const agentRows = grouped[aid]
-        const isOpen    = !!expanded[aid]
-        const count     = agentRows.length
+        const agentRows  = grouped[aid]
+        const isOpen     = !!expanded[aid]
+        const count      = agentRows.length
+        const secsLeft   = cooldowns[aid] || 0
+        const isCooling  = secsLeft > 0
 
         return (
           <div key={aid} style={{
@@ -69,7 +98,7 @@ export default function AgentHolds({ agents, branches, toast }) {
             marginBottom: 12, overflow: 'hidden', boxShadow: 'var(--shadow)'
           }}>
 
-            {/* ── Agent header row ── */}
+            {/* ── Agent header ── */}
             <div
               onClick={() => toggle(aid)}
               style={{
@@ -78,7 +107,6 @@ export default function AgentHolds({ agents, branches, toast }) {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {/* Avatar */}
                 <div style={{
                   width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
                   background: 'linear-gradient(135deg,#F39C12,#F5CBA7)',
@@ -96,7 +124,6 @@ export default function AgentHolds({ agents, branches, toast }) {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {/* Hold count badge */}
                 <span style={{
                   background: '#FEF0D9', color: '#E67E22', border: '1px solid #F5CBA7',
                   borderRadius: 20, fontSize: 11, fontWeight: 700,
@@ -147,10 +174,15 @@ export default function AgentHolds({ agents, branches, toast }) {
                 }}>
                   <button
                     className="btn btn-outline btn-sm"
-                    style={{ color: '#E67E22', borderColor: '#F5CBA7' }}
-                    onClick={() => nudge(aid)}
+                    style={{
+                      color: isCooling ? 'var(--text3)' : '#E67E22',
+                      borderColor: isCooling ? 'var(--border)' : '#F5CBA7',
+                      minWidth: 140
+                    }}
+                    onClick={e => { e.stopPropagation(); nudge(aid) }}
+                    disabled={isCooling}
                   >
-                    📞 Nudge Agent
+                    {isCooling ? `⏳ Wait ${secsLeft}s…` : '📞 Nudge Agent'}
                   </button>
                 </div>
               </div>

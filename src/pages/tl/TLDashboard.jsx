@@ -97,7 +97,7 @@ export default function TLDashboard({ profile, branches, agents, toast }) {
       {/* ── Tab content ── */}
       {tab === 'pending'         && <PendingApprovals profile={profile} branches={branches} agents={agents} toast={toast} onApproved={loadStats} />}
       {tab === 'all'             && <AllWalkIns branches={branches} agents={agents} profile={profile} toast={toast} />}
-      {tab === 'holds'           && <AgentHolds agents={agents} branches={branches} toast={toast} />}
+      {tab === 'holds'           && <AgentHolds agents={agents} branches={branches} toast={toast} profile={profile} />}
       {tab === 'pending-updates' && <PendingAgentUpdates agents={agents} branches={branches} />}
       {tab === 'import'          && <ImportData branches={branches} agents={agents} profile={profile} toast={toast} />}
     </div>

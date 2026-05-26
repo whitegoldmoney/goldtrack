@@ -2,22 +2,28 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from './lib/supabase'
 import { useToast } from './lib/utils'
 import LoginScreen from './components/LoginScreen'
-import { Toast, Spinner } from './components/UI'
+import NudgeAlert from './components/NudgeAlert'
+import { Toast } from './components/UI'
 import AgentDashboard from './pages/agent/AgentDashboard'
 import TLDashboard from './pages/tl/TLDashboard'
 import AdminDashboard from './pages/admin/AdminDashboard'
 
 export default function App() {
-  const [user, setUser] = useState(null)
+  const [user, setUser]       = useState(null)
   const [profile, setProfile] = useState(null)
   const [branches, setBranches] = useState([])
-  const [agents, setAgents] = useState([])
+  const [agents, setAgents]   = useState([])
   const [loading, setLoading] = useState(true)
   const [pendingLeads, setPendingLeads] = useState(0)
-  const [toasts, addToast] = useToast()
-  const profileRef = useRef(null)
+  const [toasts, addToast]    = useToast()
+  const profileRef            = useRef(null)
   const [welcome, setWelcome] = useState(null)
   const [welcomeExit, setWelcomeExit] = useState(false)
+
+  // ── Nudge state ──
+  const [showNudge, setShowNudge]       = useState(false)
+  const [nudgeMessage, setNudgeMessage] = useState('')
+  const [nudgeId, setNudgeId]           = useState(null)
 
   async function handleLogin(u, fromScreen = false) {
     setLoading(true)
@@ -26,18 +32,36 @@ export default function App() {
     profileRef.current = prof
     setProfile(prof)
     setUser(u)
+
     const [{ data: brs }, { data: ags }] = await Promise.all([
       supabase.from('branches').select('*').order('name'),
       supabase.from('profiles').select('id,name').eq('role', 'agent').order('name'),
     ])
     setBranches(brs || [])
     setAgents(ags || [])
+
     if (prof.role === 'agent') {
+      // Count assigned leads
       const { count } = await supabase.from('walk_ins')
         .select('id', { count: 'exact', head: true })
         .eq('assigned_agent_id', prof.id).eq('status', 'assigned')
       setPendingLeads(count || 0)
+
+      // Check for any unread nudges waiting since last session
+      const { data: unread } = await supabase
+        .from('nudges')
+        .select('*')
+        .eq('agent_id', prof.id)
+        .eq('is_read', false)
+        .order('created_at', { ascending: false })
+        .limit(1)
+      if (unread && unread.length > 0) {
+        setShowNudge(true)
+        setNudgeMessage(unread[0].message)
+        setNudgeId(unread[0].id)
+      }
     }
+
     setLoading(false)
     setupRealtime(prof)
     if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission()
@@ -55,9 +79,11 @@ export default function App() {
   }
 
   function setupRealtime(prof) {
+    // Walk-ins channel (TL new-submission alerts + agent lead/rejection alerts)
     supabase.channel('walkins-live')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'walk_ins' }, payload => {
-        if (profileRef.current?.role === 'tl' || profileRef.current?.role === 'admin') notify('New Walk-in', `${payload.new.customer_name} submitted`)
+        if (profileRef.current?.role === 'tl' || profileRef.current?.role === 'admin')
+          notify('New Walk-in', `${payload.new.customer_name} submitted`)
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'walk_ins' }, payload => {
         const p = profileRef.current; const r = payload.new
@@ -72,6 +98,31 @@ export default function App() {
         }
       })
       .subscribe()
+
+    // Nudge channel — agents only, filtered to this agent's id
+    if (prof.role === 'agent') {
+      supabase.channel('agent-nudges')
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'nudges',
+          filter: `agent_id=eq.${prof.id}`
+        }, payload => {
+          setShowNudge(true)
+          setNudgeMessage(payload.new.message)
+          setNudgeId(payload.new.id)
+        })
+        .subscribe()
+    }
+  }
+
+  async function onDismissNudge() {
+    if (nudgeId) {
+      await supabase.from('nudges').update({ is_read: true }).eq('id', nudgeId)
+    }
+    setShowNudge(false)
+    setNudgeId(null)
+    setNudgeMessage('')
   }
 
   async function handleLogout() {
@@ -79,7 +130,6 @@ export default function App() {
     setUser(null); setProfile(null); setBranches([]); setAgents([])
   }
 
-  // Check for existing session on load
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) handleLogin(data.session.user, false)
@@ -98,33 +148,50 @@ export default function App() {
 
   return (
     <>
-    {welcome && (
-      <div className={`welcome-overlay${welcomeExit ? ' exiting' : ''}`}>
-        <div className="welcome-hi">Hi, {welcome.name}</div>
-        <div className="welcome-title">Welcome to White Gold<br />Tele-Sales Walk-in</div>
-        <div className="welcome-divider" />
-        <div className="welcome-tagline">Where Every Lead Becomes Gold</div>
-      </div>
-    )}
-    <div className="app-shell">
-      <div className="topbar">
-        <div className="topbar-brand"><img src="/WG_Logo_Blue.png" alt="White Gold" className="topbar-logo" /></div>
-        <div className="topbar-right">
-          <span className="topbar-user">{profile.name}</span>
-          <span className="topbar-role">{profile.role === 'admin' ? 'Admin' : profile.role === 'tl' ? 'Team Lead' : 'Agent'}</span>
-          <button className="btn btn-outline btn-sm"
-            style={{ color: 'var(--text3)', borderColor: 'rgba(255,255,255,.2)' }}
-            onClick={handleLogout}>Sign out</button>
+      {/* Nudge alarm overlay — agents only */}
+      {profile?.role === 'agent' && showNudge && (
+        <NudgeAlert message={nudgeMessage} onDismiss={onDismissNudge} />
+      )}
+
+      {/* Welcome animation */}
+      {welcome && (
+        <div className={`welcome-overlay${welcomeExit ? ' exiting' : ''}`}>
+          <div className="welcome-hi">Hi, {welcome.name}</div>
+          <div className="welcome-title">Welcome to White Gold<br />Tele-Sales Walk-in</div>
+          <div className="welcome-divider" />
+          <div className="welcome-tagline">Where Every Lead Becomes Gold</div>
         </div>
+      )}
+
+      <div className="app-shell">
+        <div className="topbar">
+          <div className="topbar-brand">
+            <img src="/WG_Logo_Blue.png" alt="White Gold" className="topbar-logo" />
+          </div>
+          <div className="topbar-right">
+            <span className="topbar-user">{profile.name}</span>
+            <span className="topbar-role">
+              {profile.role === 'admin' ? 'Admin' : profile.role === 'tl' ? 'Team Lead' : 'Agent'}
+            </span>
+            <button
+              className="btn btn-outline btn-sm"
+              style={{ color: 'var(--text3)', borderColor: 'rgba(255,255,255,.2)' }}
+              onClick={handleLogout}
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+
+        <div className="main-content">
+          {(profile.role === 'tl' || profile.role === 'admin')
+            ? <TLDashboard profile={profile} branches={branches} agents={agents} toast={addToast} />
+            : <AgentDashboard profile={profile} branches={branches} toast={addToast} pendingCount={pendingLeads} />
+          }
+        </div>
+
+        <Toast toasts={toasts} />
       </div>
-      <div className="main-content">
-        {(profile.role === 'tl' || profile.role === 'admin')
-          ? <TLDashboard profile={profile} branches={branches} agents={agents} toast={addToast} />
-          : <AgentDashboard profile={profile} branches={branches} toast={addToast} pendingCount={pendingLeads} />
-        }
-      </div>
-      <Toast toasts={toasts} />
-    </div>
     </>
   )
 }
