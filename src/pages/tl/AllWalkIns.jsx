@@ -96,30 +96,19 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
       </div>
 
       {loading ? <Loading /> : (
-        <div className="table-wrap" style={{ overflowX: 'hidden' }}>
-          <table style={{ tableLayout: 'fixed', width: '100%', borderCollapse: 'collapse' }}>
-            <colgroup>
-              <col style={{ width: '15%' }} />  {/* customer/phone */}
-              <col style={{ width: '11%' }} />  {/* branch */}
-              <col style={{ width: '12%' }} />  {/* type/agent */}
-              <col style={{ width: '12%' }} />  {/* source */}
-              <col style={{ width: '9%' }} />   {/* walk-in status */}
-              <col style={{ width: '11%' }} />  {/* remarks */}
-              <col style={{ width: '11%' }} />  {/* status */}
-              <col style={{ width: '11%' }} />  {/* walk-in date */}
-              {isAdmin && <col style={{ width: '8%' }} />} {/* actions */}
-            </colgroup>
+        <div className="table-wrap" style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th>Customer / Phone</th>
-                <th>Branch</th>
-                <th>Type / Agent</th>
-                <th>Lead Source</th>
-                <th>Walk-in Status</th>
-                <th>Remarks</th>
-                <th>Status</th>
-                <th>Walk-in Date</th>
-                {isAdmin && <th>Actions</th>}
+                <th style={{ minWidth: 180 }}>Customer / Phone</th>
+                <th style={{ minWidth: 150 }}>Branch</th>
+                <th style={{ minWidth: 160 }}>Type / Agent</th>
+                <th style={{ minWidth: 130 }}>Lead Source</th>
+                <th style={{ minWidth: 120 }}>Walk-in Status</th>
+                <th style={{ minWidth: 150 }}>Remarks</th>
+                <th style={{ minWidth: 130 }}>Status</th>
+                <th style={{ minWidth: 130 }}>Walk-in Date</th>
+                {isAdmin && <th style={{ minWidth: 100 }}>Actions</th>}
               </tr>
             </thead>
             <tbody>
