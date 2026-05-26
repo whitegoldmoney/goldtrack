@@ -18,11 +18,16 @@ const WALKIN_STATUS = [
   { value: 'PM', label: 'PM — Previous Month' },
 ]
 
+// Previous month date range
+const now = new Date()
+const prevMonthFirst = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0]
+const prevMonthLast  = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0]
+
 export default function MyLeads({ profile, branches, toast }) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState({})
-  const [form, setForm] = useState({}) // { [id]: { lead_source, walkin_status } }
+  const [form, setForm] = useState({}) // { [id]: { lead_source, walkin_status, pm_date } }
 
   async function load() {
     setLoading(true)
@@ -41,9 +46,16 @@ export default function MyLeads({ profile, branches, toast }) {
     const f = form[id] || {}
     if (!f.lead_source) { toast('Select a lead source.', 'error'); return }
     if (!f.walkin_status) { toast('Select a walk-in status.', 'error'); return }
+    if (f.walkin_status === 'PM' && !f.pm_date) { toast('Select the walk-in date for Previous Month.', 'error'); return }
     setSaving(s => ({ ...s, [id]: true }))
+    const updates = {
+      lead_source: f.lead_source,
+      walkin_status: f.walkin_status,
+      status: 'completed',
+      ...(f.walkin_status === 'PM' && f.pm_date ? { visit_date: f.pm_date } : {})
+    }
     const { error } = await supabase.from('walk_ins')
-      .update({ lead_source: f.lead_source, walkin_status: f.walkin_status, status: 'completed' })
+      .update(updates)
       .eq('id', id).eq('assigned_agent_id', profile.id).eq('status', 'assigned')
     if (error) toast(error.message, 'error')
     else { toast('Lead locked and saved!', 'success'); load() }
@@ -82,6 +94,19 @@ export default function MyLeads({ profile, branches, toast }) {
                   {WALKIN_STATUS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
               </div>
+              {f.walkin_status === 'PM' && (
+                <div className="form-group" style={{ flex: 1, minWidth: 160 }}>
+                  <label>Walk-in Date (Prev Month) *</label>
+                  <input
+                    type="date"
+                    value={f.pm_date || ''}
+                    min={prevMonthFirst}
+                    max={prevMonthLast}
+                    onChange={e => setF(r.id, 'pm_date', e.target.value)}
+                  />
+                  <span className="form-hint">{prevMonthFirst} → {prevMonthLast}</span>
+                </div>
+              )}
             </div>
             <button className="btn btn-success" onClick={() => lockLead(r.id)} disabled={saving[r.id]}>
               {saving[r.id] ? <><Spinner /> Saving…</> : '🔒 Lock & Save'}
