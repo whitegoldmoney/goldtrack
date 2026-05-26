@@ -3,13 +3,14 @@ import { supabase } from '../../lib/supabase'
 import { parseWhatsApp } from '../../lib/utils'
 import { Spinner } from '../../components/UI'
 
-export default function NewWalkIn({ profile, branches, toast }) {
+export default function NewWalkIn({ profile, branches, toast, onDraftSaved }) {
   const [paste, setPaste] = useState('')
   const [form, setForm] = useState({
     customer_name: '', phone: '', gold_type: 'Physical', grams: '',
     branch_id: '', visit_date: new Date().toISOString().split('T')[0]
   })
   const [loading, setLoading] = useState(false)
+  const [loadingDraft, setLoadingDraft] = useState(false)
   const [parsed, setParsed] = useState(false)
 
   function handleParse() {
@@ -18,6 +19,27 @@ export default function NewWalkIn({ profile, branches, toast }) {
     setForm(f => ({ ...f, ...result }))
     setParsed(true)
     toast('Parsed! Review and submit.', 'success')
+  }
+
+  async function handleHold() {
+    const { customer_name, phone, gold_type, grams, branch_id, visit_date } = form
+    if (!customer_name || !phone || !grams || !branch_id || !visit_date) {
+      toast('Fill all required fields before saving as draft.', 'error'); return
+    }
+    setLoadingDraft(true)
+    try {
+      const { error } = await supabase.from('walk_ins').insert({
+        customer_name: customer_name.trim(), phone: phone.trim(),
+        gold_type, grams: parseFloat(grams), branch_id: parseInt(branch_id),
+        visit_date, submitted_by: profile.id, status: 'draft'
+      })
+      if (error) throw error
+      toast('Draft saved! Find it in "My Drafts" tab.', 'success')
+      setForm({ customer_name: '', phone: '', gold_type: 'Physical', grams: '', branch_id: '', visit_date: new Date().toISOString().split('T')[0] })
+      setPaste(''); setParsed(false)
+      onDraftSaved?.()
+    } catch (e) { toast(e.message, 'error') }
+    finally { setLoadingDraft(false) }
   }
 
   async function handleSubmit() {
@@ -100,9 +122,15 @@ export default function NewWalkIn({ profile, branches, toast }) {
           </div>
         </div>
         <hr className="section-sep" />
-        <button className="btn btn-primary" onClick={handleSubmit} disabled={loading}>
-          {loading ? <><Spinner dark /> Submitting…</> : '🚀 Submit Walk-in'}
-        </button>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <button className="btn btn-primary" onClick={handleSubmit} disabled={loading || loadingDraft}>
+            {loading ? <><Spinner dark /> Submitting…</> : '🚀 Submit Walk-in'}
+          </button>
+          <button className="btn btn-amber" onClick={handleHold} disabled={loading || loadingDraft}>
+            {loadingDraft ? <><Spinner /> Saving…</> : '🕐 Hold'}
+          </button>
+          <span style={{ fontSize: 12, color: 'var(--text3)' }}>Hold saves a draft — not sent to TL yet</span>
+        </div>
       </div>
     </div>
   )

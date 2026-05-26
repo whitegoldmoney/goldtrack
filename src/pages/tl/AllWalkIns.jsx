@@ -18,7 +18,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
 
   async function load() {
     setLoading(true)
-    let q = supabase.from('walk_ins').select('*').order('created_at', { ascending: false }).limit(500)
+    let q = supabase.from('walk_ins').select('*').neq('status', 'draft').order('created_at', { ascending: false }).limit(500)
     if (filter.status) q = q.eq('status', filter.status)
     if (filter.type)   q = q.eq('walk_in_type', filter.type)
     if (filter.date)   q = q.eq('visit_date', filter.date)

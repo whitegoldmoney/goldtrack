@@ -9,6 +9,7 @@ export default function MySubmissions({ profile, branches }) {
 
   useEffect(() => {
     supabase.from('walk_ins').select('*').eq('submitted_by', profile.id)
+      .neq('status', 'draft')
       .order('created_at', { ascending: false }).limit(100)
       .then(({ data }) => { setRows(data || []); setLoading(false) })
   }, [])

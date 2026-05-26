@@ -55,6 +55,8 @@ textarea{resize:vertical;min-height:72px;font-family:'DM Mono',monospace;font-si
 .btn-danger:hover:not(:disabled){background:var(--red);color:var(--white)}
 .btn-success{background:var(--green-bg);color:var(--green);border:1px solid #b8dfc9}
 .btn-success:hover:not(:disabled){background:var(--green);color:var(--white)}
+.btn-amber{background:#FEF0D9;color:#E67E22;border:1px solid #F5CBA7}
+.btn-amber:hover:not(:disabled){background:#E67E22;color:var(--white)}
 .btn-sm{padding:5px 12px;font-size:12px}
 .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase}
 .badge-pending{background:#FEF9E7;color:#B7950B;border:1px solid #F7DC6F}
