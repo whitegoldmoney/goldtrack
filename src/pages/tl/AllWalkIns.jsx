@@ -99,7 +99,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
           <table>
             <thead><tr>
               <th>Customer</th><th>Phone</th><th>Gold</th><th>Grams</th><th>Branch</th>
-              <th>Type</th><th>Agent</th><th>Lead Source</th><th>Walk-in Status</th><th>Status</th><th>Submitted</th>
+              <th>Type</th><th>Agent</th><th>Lead Source</th><th>Walk-in Status</th><th>Status</th><th>Walk-in Date</th><th>Submitted</th>
               {isAdmin && <th>Actions</th>}
             </tr></thead>
             <tbody>
@@ -118,6 +118,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
                     : '—'}
                   </td>
                   <td><StatusBadge status={r.status} /></td>
+                  <td style={{ fontSize: 12, color: 'var(--text2)' }}>{r.visit_date || '—'}</td>
                   <td style={{ fontSize: 11, color: 'var(--text3)' }}>{fmt(r.created_at)}</td>
                   {isAdmin && (
                     <td>
@@ -132,7 +133,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
                 </tr>
               ))}
               {!filtered.length && (
-                <tr><td colSpan={isAdmin ? 12 : 11} style={{ textAlign: 'center', padding: 32, color: 'var(--text3)' }}>No records found.</td></tr>
+                <tr><td colSpan={isAdmin ? 13 : 12} style={{ textAlign: 'center', padding: 32, color: 'var(--text3)' }}>No records found.</td></tr>
               )}
             </tbody>
           </table>
@@ -179,7 +180,7 @@ export default function AllWalkIns({ branches, agents, profile, toast }) {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Visit Date</label>
+                  <label>Walk-in Date</label>
                   <input type="date" value={editing.visit_date || ''} onChange={e => setE('visit_date', e.target.value)} />
                 </div>
                 <div className="form-group">

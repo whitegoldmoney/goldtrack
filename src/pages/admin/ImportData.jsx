@@ -14,7 +14,7 @@ const LEAD_SOURCES = [
 
 const HEADERS = [
   'Customer Name', 'Phone', 'Gold Type', 'Grams', 'Branch Name',
-  'Visit Date (YYYY-MM-DD)', 'Walk-in Type', 'Agent Name',
+  'Walk-in Date (YYYY-MM-DD)', 'Walk-in Type', 'Agent Name',
   'Lead Source', 'Walk-in Status', 'Status', 'Rejection Reason'
 ]
 
@@ -192,7 +192,7 @@ export default function ImportData({ branches, agents, profile, toast }) {
               ['Walk-in Type', 'tele_sales · direct'],
               ['Walk-in Status', 'NL · CM · PM'],
               ['Status', 'completed · rejected · pending'],
-              ['Visit Date', 'YYYY-MM-DD  e.g. 2025-11-20'],
+              ['Walk-in Date', 'YYYY-MM-DD  e.g. 2025-11-20'],
             ].map(([k, v]) => (
               <span key={k} style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 4, padding: '3px 10px' }}>
                 <strong>{k}:</strong> {v}

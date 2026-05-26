@@ -95,7 +95,7 @@ export default function NewWalkIn({ profile, branches, toast }) {
             </select>
           </div>
           <div className="form-group">
-            <label>Visit Date *</label>
+            <label>Walk-in Date *</label>
             <input type="date" value={form.visit_date} onChange={e => setForm(f => ({ ...f, visit_date: e.target.value }))} />
           </div>
         </div>

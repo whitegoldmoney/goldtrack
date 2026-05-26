@@ -198,7 +198,7 @@ export default function AdminDashboard({ branches, agents, toast }) {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Visit Date</label>
+                  <label>Walk-in Date</label>
                   <input type="date" value={editing.visit_date || ''} onChange={e => setE('visit_date', e.target.value)} />
                 </div>
                 <div className="form-group">
