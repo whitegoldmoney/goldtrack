@@ -25,6 +25,7 @@ export default function App() {
   // ── Badge counts ──
   const [pendingLeads, setPendingLeads] = useState(0)
   const [draftCount, setDraftCount]     = useState(0)
+  const [remarksCount, setRemarksCount] = useState(0)
   const [tlBadges, setTlBadges]         = useState({ pending: 0, holds: 0 })
 
   // ── Nudge state ──
@@ -37,6 +38,17 @@ export default function App() {
       .select('id', { count: 'exact', head: true })
       .eq('submitted_by', profId).eq('status', 'draft')
     setDraftCount(count || 0)
+  }
+
+  async function loadRemarksCount(profId) {
+    const today = new Date().toISOString().split('T')[0]
+    const { data } = await supabase.from('walk_ins')
+      .select('id, remarks')
+      .eq('submitted_by', profId)
+      .gte('created_at', today + 'T00:00:00')
+      .lte('created_at', today + 'T23:59:59')
+      .not('status', 'eq', 'draft')
+    setRemarksCount((data || []).filter(w => !w.remarks).length)
   }
 
   async function handleLogin(u, fromScreen = false) {
@@ -64,6 +76,7 @@ export default function App() {
       setPendingLeads(count || 0)
 
       loadDraftCount(prof.id)
+      loadRemarksCount(prof.id)
 
       const { data: unread } = await supabase
         .from('nudges').select('*')
@@ -191,6 +204,7 @@ export default function App() {
         { key: 'new',         icon: '🏠', label: 'New Walk-in' },
         { key: 'drafts',      icon: '📋', label: 'My Drafts',      badge: draftCount },
         { key: 'submissions', icon: '📤', label: 'My Submissions' },
+        { key: 'remarks',     icon: '📝', label: 'Remarks Update', badge: remarksCount },
         { key: 'leads',       icon: '🎯', label: 'My Leads',       badge: pendingLeads },
         { key: 'history',     icon: '📊', label: 'My History' },
       ],
@@ -319,6 +333,7 @@ export default function App() {
                   draftCount={draftCount}
                   onDraftCountChange={setDraftCount}
                   onDraftSaved={() => loadDraftCount(profile.id)}
+                  onRemarksCountChange={count => { setRemarksCount(count) }}
                 />
               : <TLDashboard
                   activePage={activePage}
