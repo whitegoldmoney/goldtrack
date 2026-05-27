@@ -6,12 +6,11 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
   const [loading, setLoading]                   = useState(false)
   const [localRemarks, setLocalRemarks]         = useState({})
   const [localBMRemarks, setLocalBMRemarks]     = useState({})
+  const [localSoldGrams, setLocalSoldGrams]     = useState({})
   const [saving, setSaving]                     = useState({})
   const [manuallyUnlocked, setManuallyUnlocked] = useState({})
 
   // ── Lock logic ────────────────────────────────────────────────
-  // A card is locked if remarks_updated_at is set in DB AND the
-  // agent hasn't clicked "Edit" for that specific card this session.
   function isLocked(row) {
     return !!row.remarks_updated_at && !manuallyUnlocked[row.id]
   }
@@ -42,12 +41,26 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
 
   // ── Save ──────────────────────────────────────────────────────
   async function saveRemarks(row) {
+    const remarks = localRemarks[row.id] ?? row.remarks ?? null
+
+    // Validate: grams_sold required when Sold
+    if (remarks === 'Sold') {
+      const grams = localSoldGrams[row.id] ?? row.grams_sold
+      if (!grams || parseFloat(grams) <= 0) {
+        toast('Sold Grams is required when Sold is selected.', 'error')
+        return
+      }
+    }
+
     setSaving(s => ({ ...s, [row.id]: true }))
     const { error } = await supabase
       .from('walk_ins')
       .update({
-        remarks:            localRemarks[row.id]   ?? row.remarks    ?? null,
+        remarks,
         bm_remarks:         localBMRemarks[row.id] ?? row.bm_remarks ?? null,
+        grams_sold:         remarks === 'Sold'
+                              ? parseFloat(localSoldGrams[row.id] ?? row.grams_sold)
+                              : null,
         remarks_updated_at: new Date().toISOString(),
         remarks_updated_by: profile.id,
       })
@@ -58,7 +71,6 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
       toast(error.message, 'error')
     } else {
       toast('Remarks saved!', 'success')
-      // Re-lock: remove from manuallyUnlocked so DB value takes over
       setManuallyUnlocked(u => { const n = { ...u }; delete n[row.id]; return n })
       load()
     }
@@ -119,8 +131,9 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {rows.map(row => {
-            const locked = isLocked(row)
-            const phone  = row.customer_mobile || row.phone || '—'
+            const locked      = isLocked(row)
+            const phone       = row.customer_mobile || row.phone || '—'
+            const activeRemark = localRemarks[row.id] ?? row.remarks ?? ''
 
             return (
               <div key={row.id} style={{
@@ -165,7 +178,7 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
                   </label>
                   <select
                     disabled={locked}
-                    value={localRemarks[row.id] ?? row.remarks ?? ''}
+                    value={activeRemark}
                     onChange={e => setLocalRemarks(r => ({ ...r, [row.id]: e.target.value }))}
                     style={{
                       width: '100%', fontSize: 13,
@@ -184,6 +197,43 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
                     <option value="Came for Release">Came for Release</option>
                   </select>
                 </div>
+
+                {/* ── Sold Grams — only when Sold is selected ── */}
+                {activeRemark === 'Sold' && (
+                  <div style={{ marginBottom: 10 }}>
+                    <label style={{
+                      fontSize: 11, fontWeight: 600, color: 'var(--text3)',
+                      display: 'block', marginBottom: 4, letterSpacing: '0.04em',
+                    }}>
+                      SOLD GRAMS *{' '}
+                      <span style={{ color: 'var(--red)', fontSize: 10, fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
+                        Required when Sold
+                      </span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      placeholder="Enter grams sold e.g. 10.5"
+                      disabled={locked}
+                      value={localSoldGrams[row.id] ?? row.grams_sold ?? ''}
+                      onChange={e => setLocalSoldGrams(s => ({ ...s, [row.id]: e.target.value }))}
+                      style={{
+                        width: '100%', fontSize: 13,
+                        opacity:    locked ? 0.6 : 1,
+                        background: locked ? 'var(--surface)' : 'var(--white)',
+                        cursor:     locked ? 'not-allowed' : 'default',
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* ── Saved grams display on locked card ── */}
+                {locked && row.remarks === 'Sold' && row.grams_sold && (
+                  <div style={{ fontSize: 12, color: 'var(--green)', marginBottom: 10, fontWeight: 500 }}>
+                    💰 Sold: {row.grams_sold}g
+                  </div>
+                )}
 
                 {/* ── BM Remarks textarea ── */}
                 <div style={{ marginBottom: 12 }}>
