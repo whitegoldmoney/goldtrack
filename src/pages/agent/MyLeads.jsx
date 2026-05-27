@@ -136,7 +136,7 @@ export default function MyLeads({ profile, branches, toast }) {
               {/* ── PM date picker ── */}
               {f.walkin_status === 'PM' && (
                 <div style={{ marginBottom: 10 }}>
-                  <label style={fieldLabel}>Actual Walk-in Date *</label>
+                  <label style={fieldLabel}>Date *</label>
                   <input
                     type="date"
                     max={today}
@@ -144,7 +144,7 @@ export default function MyLeads({ profile, branches, toast }) {
                     onChange={e => setF(r.id, 'pm_date', e.target.value)}
                     style={{ ...fieldSelect }}
                   />
-                  <span className="form-hint" style={{ fontSize: 10, marginTop: 3, display: 'block' }}>Select the actual date of the walk-in</span>
+                  <span className="form-hint" style={{ fontSize: 10, marginTop: 3, display: 'block' }}>Select the date of the walk-in</span>
                 </div>
               )}
 
