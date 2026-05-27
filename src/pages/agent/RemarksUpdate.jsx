@@ -95,7 +95,13 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {rows.map(row => {
-            const isLocked = !!savedAt[row.id]
+            // Lock if saved in this session OR if DB shows remarks were previously saved
+            const isLocked = !!savedAt[row.id] || !!row.remarks_updated_at
+            const savedTime = savedAt[row.id]
+              ? savedAt[row.id].toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+              : row.remarks_updated_at
+                ? new Date(row.remarks_updated_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+                : null
             const phone    = row.customer_mobile || row.phone || '—'
 
             return (
@@ -120,7 +126,7 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
                     padding: '3px 10px', borderRadius: 20,
                     letterSpacing: '0.03em',
                   }}>
-                    ✓ Saved {savedAt[row.id].toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                    ✓ Saved {savedTime}
                   </div>
                 )}
 
