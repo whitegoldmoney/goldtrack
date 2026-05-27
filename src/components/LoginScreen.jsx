@@ -20,6 +20,7 @@ export default function LoginScreen({ onLogin }) {
       if (error) throw error
       // Persist the preference and mark this as an active browser session
       localStorage.setItem('goldtrack_keep', keepSignedIn ? '1' : '0')
+      localStorage.setItem('goldtrack_login_ts', Date.now().toString())
       if (!keepSignedIn) sessionStorage.setItem('goldtrack_active', '1')
       else sessionStorage.removeItem('goldtrack_active')
       onLogin(data.user)

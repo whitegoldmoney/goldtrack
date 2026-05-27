@@ -134,21 +134,44 @@ export default function App() {
   async function handleLogout() {
     await supabase.auth.signOut()
     sessionStorage.removeItem('goldtrack_active')
+    localStorage.removeItem('goldtrack_login_ts')
     setUser(null); setProfile(null); setBranches([]); setAgents([])
     setActivePage('')
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (data.session) {
-        const keep   = localStorage.getItem('goldtrack_keep')
-        const active = sessionStorage.getItem('goldtrack_active')
-        if (keep === '0' && !active) {
-          await supabase.auth.signOut(); setLoading(false); return
+    // onAuthStateChange handles expired-token refresh automatically (getSession does not).
+    // INITIAL_SESSION fires once on load with the stored session (or null).
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event !== 'INITIAL_SESSION') return
+
+      if (!session) { setLoading(false); return }
+
+      const keep = localStorage.getItem('goldtrack_keep')
+
+      if (keep === '0') {
+        // User chose not to stay signed in — check if this is a fresh browser open or
+        // just a new tab / refresh in the same session.
+        const active    = sessionStorage.getItem('goldtrack_active')
+        const loginTs   = parseInt(localStorage.getItem('goldtrack_login_ts') || '0')
+        const ageMs     = Date.now() - loginTs
+        const withinSession = ageMs < 8 * 60 * 60 * 1000  // 8-hour grace window
+
+        if (!active && !withinSession) {
+          // Looks like a fresh browser open — clear session
+          await supabase.auth.signOut()
+          setLoading(false)
+          return
         }
-        handleLogin(data.session.user, false)
-      } else { setLoading(false) }
+
+        // New tab opened in an active session — mark it so it doesn't sign out again
+        if (!active) sessionStorage.setItem('goldtrack_active', '1')
+      }
+
+      handleLogin(session.user, false)
     })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   if (loading) return (
