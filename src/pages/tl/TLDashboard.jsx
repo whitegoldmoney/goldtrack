@@ -8,17 +8,15 @@ import ImportData from '../admin/ImportData'
 import TeamManagement from '../admin/TeamManagement'
 import AgentPerformanceDashboard from './AgentDashboard'
 
-export default function TLDashboard({ profile, branches, agents, toast }) {
-  const [tab, setTab]   = useState('pending')
-  const [stats, setStats] = useState({ pending: 0, today: 0, tele: 0, direct: 0, completed: 0, holds: 0 })
+export default function TLDashboard({ activePage, profile, branches, agents, toast, onBadgesUpdate }) {
+  const [stats, setStats]         = useState({ pending: 0, today: 0, tele: 0, direct: 0, completed: 0, holds: 0 })
   const [tlProfiles, setTlProfiles] = useState([])
 
-  // Team agent IDs — used only for PendingApprovals filtering (not stats)
+  // Team agent IDs — used only for PendingApprovals filtering
   const myTeamAgentIds = profile.role === 'admin'
     ? null
     : agents.filter(a => a.assigned_tl === profile.id).map(a => a.id)
 
-  // Load TL profiles once (for Team labels in AllWalkIns / AgentHolds)
   useEffect(() => {
     supabase.from('profiles').select('id, name').eq('role', 'tl')
       .then(({ data }) => setTlProfiles(data || []))
@@ -26,7 +24,6 @@ export default function TLDashboard({ profile, branches, agents, toast }) {
 
   async function loadStats() {
     const today = new Date().toISOString().split('T')[0]
-    // No team filter — stats always show ALL walk-ins totals
     const [p, tod, tele, dir, comp, hold] = await Promise.all([
       supabase.from('walk_ins').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
       supabase.from('walk_ins').select('id', { count: 'exact', head: true }).eq('visit_date', today),
@@ -35,14 +32,16 @@ export default function TLDashboard({ profile, branches, agents, toast }) {
       supabase.from('walk_ins').select('id', { count: 'exact', head: true }).eq('status', 'completed'),
       supabase.from('walk_ins').select('id', { count: 'exact', head: true }).eq('status', 'draft'),
     ])
-    setStats({
+    const next = {
       pending:   p.count    || 0,
       today:     tod.count  || 0,
       tele:      tele.count || 0,
       direct:    dir.count  || 0,
       completed: comp.count || 0,
       holds:     hold.count || 0,
-    })
+    }
+    setStats(next)
+    onBadgesUpdate({ pending: next.pending, holds: next.holds })
   }
 
   useEffect(() => {
@@ -56,8 +55,8 @@ export default function TLDashboard({ profile, branches, agents, toast }) {
 
   return (
     <div>
-      {/* ── Stats strip — always shows ALL walk-ins totals ── */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}>
+      {/* ── Stats strip — always visible ── */}
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(6, 1fr)', marginBottom: 24 }}>
         <div className="stat-card gold">
           <div className="stat-num" style={{ color: 'var(--gold)' }}>{stats.pending}</div>
           <div className="stat-label">⏳ Pending</div>
@@ -84,46 +83,14 @@ export default function TLDashboard({ profile, branches, agents, toast }) {
         </div>
       </div>
 
-      {/* ── Tabs ── */}
-      <div className="tabs">
-        <button className={`tab-btn ${tab === 'pending' ? 'active' : ''}`} onClick={() => setTab('pending')}>
-          Pending Approvals {stats.pending > 0 && <span className="notif-count">{stats.pending}</span>}
-        </button>
-        <button className={`tab-btn ${tab === 'all' ? 'active' : ''}`} onClick={() => setTab('all')}>
-          All Walk-ins
-        </button>
-        <button className={`tab-btn ${tab === 'holds' ? 'active' : ''}`} onClick={() => setTab('holds')}>
-          🕐 Agent Holds {stats.holds > 0 && (
-            <span className="notif-count" style={{ background: '#E67E22' }}>{stats.holds}</span>
-          )}
-        </button>
-        <button className={`tab-btn ${tab === 'pending-updates' ? 'active' : ''}`} onClick={() => setTab('pending-updates')}>
-          ⚠ Agent Pending Updates
-        </button>
-        {(profile.role === 'admin' || profile.role === 'tl') && (
-          <button className={`tab-btn ${tab === 'import' ? 'active' : ''}`} onClick={() => setTab('import')}>
-            ⬆ Import Data
-          </button>
-        )}
-        <button className={`tab-btn ${tab === 'dashboard' ? 'active' : ''}`} onClick={() => setTab('dashboard')}>
-          📊 Dashboard
-        </button>
-        {profile.role === 'admin' && (
-          <button className={`tab-btn ${tab === 'teams' ? 'active' : ''}`} onClick={() => setTab('teams')}>
-            👥 Team Management
-          </button>
-        )}
-      </div>
-
-      {/* ── Tab content ── */}
-      {/* PendingApprovals: team-filtered — TL only approves their own team's walk-ins */}
-      {tab === 'pending'         && <PendingApprovals profile={profile} branches={branches} agents={agents} toast={toast} onApproved={loadStats} teamAgentIds={myTeamAgentIds} />}
-      {tab === 'all'             && <AllWalkIns branches={branches} agents={agents} profile={profile} toast={toast} tls={tlProfiles} />}
-      {tab === 'holds'           && <AgentHolds agents={agents} branches={branches} toast={toast} profile={profile} tls={tlProfiles} />}
-      {tab === 'pending-updates' && <PendingAgentUpdates agents={agents} branches={branches} />}
-      {tab === 'import'          && <ImportData branches={branches} agents={agents} profile={profile} toast={toast} />}
-      {tab === 'dashboard' && <AgentPerformanceDashboard profile={profile} />}
-      {tab === 'teams' && profile.role === 'admin' && <TeamManagement toast={toast} />}
+      {/* ── Page content ── */}
+      {activePage === 'pending'         && <PendingApprovals profile={profile} branches={branches} agents={agents} toast={toast} onApproved={loadStats} teamAgentIds={myTeamAgentIds} />}
+      {activePage === 'all'             && <AllWalkIns branches={branches} agents={agents} profile={profile} toast={toast} tls={tlProfiles} />}
+      {activePage === 'holds'           && <AgentHolds agents={agents} branches={branches} toast={toast} profile={profile} tls={tlProfiles} />}
+      {activePage === 'pending-updates' && <PendingAgentUpdates agents={agents} branches={branches} />}
+      {activePage === 'dashboard'       && <AgentPerformanceDashboard profile={profile} />}
+      {activePage === 'import'          && <ImportData branches={branches} agents={agents} profile={profile} toast={toast} />}
+      {activePage === 'teams' && profile.role === 'admin' && <TeamManagement toast={toast} />}
     </div>
   )
 }
