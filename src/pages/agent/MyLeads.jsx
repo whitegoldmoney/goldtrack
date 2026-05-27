@@ -18,10 +18,6 @@ const WALKIN_STATUS = [
   { value: 'PM', label: 'PM — Previous Month' },
 ]
 
-const REMARKS_OPTIONS = [
-  'Taken Quotation', 'Price Enquiry', 'Price Issue',
-  'Verification Failed', 'Sold', 'KYC Failed', 'Release Loss',
-]
 
 const today = new Date().toISOString().split('T')[0]
 
@@ -62,15 +58,11 @@ export default function MyLeads({ profile, branches, toast }) {
     if (!f.lead_source)   { toast('Select a lead source.', 'error'); return }
     if (!f.walkin_status) { toast('Select a walk-in status.', 'error'); return }
     if (f.walkin_status === 'PM' && !f.pm_date) { toast('Select the walk-in date for Previous Month.', 'error'); return }
-    if (f.remarks === 'Sold' && !f.grams_sold)  { toast('Enter how many grams were sold.', 'error'); return }
     setSaving(s => ({ ...s, [id]: true }))
     const updates = {
       lead_source: f.lead_source,
       walkin_status: f.walkin_status,
       status: 'completed',
-      remarks: f.remarks || null,
-      grams_sold: f.remarks === 'Sold' ? parseFloat(f.grams_sold) : null,
-      bm_remarks: f.bm_remarks || null,
       ...(f.walkin_status === 'PM' && f.pm_date ? { visit_date: f.pm_date } : {})
     }
     const { error } = await supabase.from('walk_ins')
@@ -156,43 +148,6 @@ export default function MyLeads({ profile, branches, toast }) {
                 </div>
               )}
 
-              {/* ── Remarks ── */}
-              <div style={{ marginBottom: 10 }}>
-                <label style={fieldLabel}>
-                  Remarks <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, color: 'var(--text3)' }}>(optional)</span>
-                </label>
-                <select style={fieldSelect} value={f.remarks || ''} onChange={e => setF(r.id, 'remarks', e.target.value)}>
-                  <option value="">— Select Remarks —</option>
-                  {REMARKS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-              </div>
-
-              {/* ── Grams Sold (conditional on Sold) ── */}
-              {f.remarks === 'Sold' && (
-                <div style={{ marginBottom: 10 }}>
-                  <label style={fieldLabel}>Grams Sold *</label>
-                  <input
-                    type="number" step="0.1" min="0"
-                    placeholder="e.g. 10.5"
-                    value={f.grams_sold || ''}
-                    onChange={e => setF(r.id, 'grams_sold', e.target.value)}
-                    style={{ ...fieldSelect }}
-                  />
-                </div>
-              )}
-
-              {/* ── BM Remarks ── */}
-              <div style={{ marginBottom: 12 }}>
-                <label style={fieldLabel}>
-                  Branch Manager Remarks <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>(optional)</span>
-                </label>
-                <textarea
-                  value={f.bm_remarks || ''}
-                  onChange={e => setF(r.id, 'bm_remarks', e.target.value)}
-                  placeholder="e.g. Customer not interested, will revisit next month…"
-                  style={{ ...fieldSelect, minHeight: 60, resize: 'vertical', fontFamily: 'inherit' }}
-                />
-              </div>
 
               {/* ── Lock & Save ── */}
               <button
