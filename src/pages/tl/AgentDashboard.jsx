@@ -3,8 +3,7 @@ import * as XLSX from 'xlsx'
 import { supabase } from '../../lib/supabase'
 import { Loading, Empty } from '../../components/UI'
 
-const PERIODS = ['Today', 'This Week', 'This Month', 'All Time']
-
+// ── Pure date range helper ────────────────────────────────────────
 function getDateRange(period) {
   const todayStr = new Date().toISOString().split('T')[0]
   if (period === 'Today')
@@ -15,7 +14,6 @@ function getDateRange(period) {
   }
   if (period === 'This Month')
     return { from: `${todayStr.slice(0, 7)}-01T00:00:00`, to: `${todayStr}T23:59:59.999` }
-  // All Time — use a wide open range
   return { from: '2020-01-01T00:00:00', to: `${todayStr}T23:59:59.999` }
 }
 
@@ -38,14 +36,12 @@ function fmtG(g) {
   return `${g % 1 === 0 ? g : g.toFixed(1)}g`
 }
 
-// Zero → muted dash, non-zero → number
 function val(n) {
   return n === 0
     ? <span style={{ color: 'var(--border2)' }}>—</span>
     : n
 }
 
-// Shared inline styles for compact table cells
 const TH = (extra = {}) => ({
   fontSize: 11, padding: '8px 10px', fontWeight: 600,
   color: 'var(--text2)', textTransform: 'uppercase',
@@ -58,31 +54,53 @@ const TD = (extra = {}) => ({
   ...extra,
 })
 
+const PERIOD_BTNS = ['Today', 'This Week', 'This Month']
+const DATE_INPUT  = { padding: '5px 10px', fontSize: 12, border: '1px solid var(--border2)', borderRadius: 6, background: 'var(--white)' }
+
 export default function AgentPerformanceDashboard({ profile }) {
-  const [period,     setPeriod]     = useState('Today')
-  const [teamFilter, setTeamFilter] = useState('')
-  const [hideZero,   setHideZero]   = useState(true)
-  const [tls,        setTls]        = useState([])
-  const [rows,       setRows]       = useState([])
-  const [loading,    setLoading]    = useState(true)
+  const [period,        setPeriod]        = useState('Today')
+  const [teamFilter,    setTeamFilter]    = useState('')
+  const [hideZero,      setHideZero]      = useState(true)
+  const [tls,           setTls]           = useState([])
+  const [rows,          setRows]          = useState([])
+  const [loading,       setLoading]       = useState(true)
+
+  // ── Custom date range ─────────────────────────────────────────
+  const [showCustom,    setShowCustom]    = useState(false)
+  const [customFrom,    setCustomFrom]    = useState('')
+  const [customTo,      setCustomTo]      = useState('')
+  // appliedRange is only set when Apply is clicked — avoids re-fetching on every keystroke
+  const [appliedRange,  setAppliedRange]  = useState(null)
 
   const todayStr = new Date().toISOString().split('T')[0]
 
-  // TL list for admin team filter + team label in cells
+  // TL list for team filter dropdown + team column badges
   useEffect(() => {
     supabase.from('profiles').select('id, name').eq('role', 'tl').order('name')
       .then(({ data }) => setTls(data || []))
   }, [])
 
-  const getTLName = tlId => {
-    if (!tlId) return null
+  function tlBadge(tlId) {
+    if (!tlId) return <span style={{ color: 'var(--text3)' }}>—</span>
     const tl = tls.find(t => t.id === tlId)
-    return tl ? `${tl.name.split(' ')[0]}'s Team` : null
+    if (!tl) return <span style={{ color: 'var(--text3)' }}>—</span>
+    return (
+      <span style={{
+        fontSize: 10, padding: '2px 6px',
+        background: 'rgba(201,168,76,0.12)', color: 'var(--gold)',
+        borderRadius: 4, fontWeight: 600, whiteSpace: 'nowrap',
+      }}>
+        {tl.name.split(' ')[0]}
+      </span>
+    )
   }
 
+  // ── Data load ─────────────────────────────────────────────────
+  // appliedRange drives custom date; period drives preset buttons.
+  // Neither customFrom nor customTo are deps — they only matter once Apply fires.
   const loadData = useCallback(async () => {
     setLoading(true)
-    const { from, to } = getDateRange(period)
+    const { from, to } = appliedRange || getDateRange(period)
 
     const [{ data: walkIns }, { data: agentList }] = await Promise.all([
       supabase.from('walk_ins').select('*')
@@ -102,11 +120,11 @@ export default function AgentPerformanceDashboard({ profile }) {
 
     setRows(buildStats(walkIns || [], agents))
     setLoading(false)
-  }, [period, teamFilter, profile.id, profile.role])
+  }, [period, teamFilter, profile.id, profile.role, appliedRange])
 
   useEffect(() => { loadData() }, [loadData])
 
-  // Totals from ALL rows (ignores hideZero — shows full picture)
+  // ── Aggregates ────────────────────────────────────────────────
   const totals = {
     nl:        rows.reduce((s, r) => s + r.nl,        0),
     cm:        rows.reduce((s, r) => s + r.cm,        0),
@@ -116,23 +134,34 @@ export default function AgentPerformanceDashboard({ profile }) {
     soldGrams: rows.reduce((s, r) => s + r.soldGrams, 0),
   }
 
-  // Rows shown in table (filtered by hideZero)
   const displayRows = hideZero ? rows.filter(r => r.total > 0) : rows
+  const maxTotal    = Math.max(...rows.map(r => r.total), 0)
 
-  const maxTotal = Math.max(...rows.map(r => r.total), 0)
+  // ── Period button handler ─────────────────────────────────────
+  function selectPeriod(label) {
+    setPeriod(label)
+    setShowCustom(false)
+    setAppliedRange(null)   // clear custom range → loadData will use getDateRange(period)
+  }
 
+  // ── Apply custom range ────────────────────────────────────────
+  function applyCustom() {
+    if (!customFrom || !customTo) return
+    setAppliedRange({ from: customFrom + 'T00:00:00', to: customTo + 'T23:59:59.999' })
+  }
+
+  // ── Excel export ──────────────────────────────────────────────
   function exportExcel() {
     const data = rows.map(r => ({
-      'Agent Name':     r.agent.name,
-      'NL':             r.nl,
-      'CM':             r.cm,
-      'PM':             r.pm,
+      'Agent Name': r.agent.name,
+      'Team':       tls.find(t => t.id === r.agent.assigned_tl)?.name || '—',
+      'NL': r.nl, 'CM': r.cm, 'PM': r.pm,
       'Total Walk-ins': r.total,
       'Walk-in Sold':   r.sold,
       'Sold Grams':     r.soldGrams,
     }))
     data.push({
-      'Agent Name': 'TOTAL',
+      'Agent Name': 'TOTAL', 'Team': '',
       'NL': totals.nl, 'CM': totals.cm, 'PM': totals.pm,
       'Total Walk-ins': totals.total,
       'Walk-in Sold': totals.sold,
@@ -144,21 +173,55 @@ export default function AgentPerformanceDashboard({ profile }) {
     XLSX.writeFile(wb, `agent-performance-${todayStr}.xlsx`)
   }
 
+  // ── Render ────────────────────────────────────────────────────
   return (
     <div>
       {/* ── Filter bar ── */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
 
-        {/* Period buttons */}
-        {PERIODS.map(label => (
+        {/* Period preset buttons */}
+        {PERIOD_BTNS.map(label => (
           <button
             key={label}
-            className={`btn btn-sm ${period === label ? 'btn-dark' : 'btn-outline'}`}
-            onClick={() => setPeriod(label)}
+            className={`btn btn-sm ${period === label && !showCustom ? 'btn-dark' : 'btn-outline'}`}
+            onClick={() => selectPeriod(label)}
           >
             {label}
           </button>
         ))}
+
+        {/* Custom range button */}
+        <button
+          className={`btn btn-sm ${showCustom ? 'btn-dark' : 'btn-outline'}`}
+          onClick={() => setShowCustom(true)}
+        >
+          📅 Custom Range
+        </button>
+
+        {/* Custom date pickers */}
+        {showCustom && (
+          <>
+            <input
+              type="date" value={customFrom}
+              onChange={e => setCustomFrom(e.target.value)}
+              style={DATE_INPUT}
+            />
+            <span style={{ fontSize: 12, color: 'var(--text3)' }}>to</span>
+            <input
+              type="date" value={customTo}
+              onChange={e => setCustomTo(e.target.value)}
+              style={DATE_INPUT}
+            />
+            <button
+              className="btn btn-dark btn-sm"
+              onClick={applyCustom}
+              disabled={!customFrom || !customTo}
+              style={{ fontSize: 12 }}
+            >
+              Apply
+            </button>
+          </>
+        )}
 
         {/* Team filter — admin only */}
         {profile.role === 'admin' && (
@@ -201,32 +264,44 @@ export default function AgentPerformanceDashboard({ profile }) {
       ) : rows.length === 0 ? (
         <Empty icon="📊" text="No agents found for the selected filter." />
       ) : (
-        <div style={{ maxWidth: 1000 }}>
+        <div style={{ maxWidth: 1100 }}>
+
+          {/* Context label */}
+          <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>
+            {profile.role === 'admin'
+              ? (teamFilter
+                  ? `${tls.find(t => t.id === teamFilter)?.name.split(' ')[0]}'s team`
+                  : 'All agents across all teams')
+              : 'All agents — all teams'}
+          </div>
+
           {totals.total === 0 && (
             <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 10 }}>
               No completed walk-ins for this period.
             </div>
           )}
-          {displayRows.length === 0 && hideZero ? (
+          {displayRows.length === 0 && hideZero && (
             <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 10 }}>
-              No active agents for this period. Uncheck "Active only" to see all agents.
+              No active agents for this period. Uncheck "Active only" to see all.
             </div>
-          ) : null}
+          )}
 
           <div className="table-wrap">
             <table style={{ tableLayout: 'fixed', width: '100%', borderCollapse: 'collapse' }}>
               <colgroup>
-                <col style={{ width: '30%' }} />
-                <col style={{ width: '10%' }} />
-                <col style={{ width: '10%' }} />
-                <col style={{ width: '10%' }} />
+                <col style={{ width: '22%' }} />
                 <col style={{ width: '12%' }} />
-                <col style={{ width: '12%' }} />
-                <col style={{ width: '16%' }} />
+                <col style={{ width: '8%' }} />
+                <col style={{ width: '8%' }} />
+                <col style={{ width: '8%' }} />
+                <col style={{ width: '11%' }} />
+                <col style={{ width: '11%' }} />
+                <col style={{ width: '14%' }} />
               </colgroup>
               <thead>
                 <tr>
                   <th style={TH({ textAlign: 'left' })}>Agent Name</th>
+                  <th style={TH({ textAlign: 'left' })}>Team</th>
                   <th style={TH({ textAlign: 'center', color: 'var(--blue)' })}>NL</th>
                   <th style={TH({ textAlign: 'center', color: '#E67E22' })}>CM</th>
                   <th style={TH({ textAlign: 'center', color: '#8E44AD' })}>PM</th>
@@ -249,6 +324,9 @@ export default function AgentPerformanceDashboard({ profile }) {
                       <td style={TD({ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>
                         {r.agent.name}
                       </td>
+                      <td style={TD({})}>
+                        {tlBadge(r.agent.assigned_tl)}
+                      </td>
                       <td style={TD({ textAlign: 'center', fontFamily: 'DM Mono', color: 'var(--blue)' })}>{val(r.nl)}</td>
                       <td style={TD({ textAlign: 'center', fontFamily: 'DM Mono', color: '#E67E22' })}>{val(r.cm)}</td>
                       <td style={TD({ textAlign: 'center', fontFamily: 'DM Mono', color: '#8E44AD' })}>{val(r.pm)}</td>
@@ -264,11 +342,12 @@ export default function AgentPerformanceDashboard({ profile }) {
               <tfoot>
                 <tr style={{ background: 'var(--dark)', color: 'var(--white)', fontWeight: 600 }}>
                   <td style={{ padding: '8px 10px', fontSize: 12, letterSpacing: '.05em' }}>TOTAL</td>
-                  <td style={{ textAlign: 'center', padding: '8px 10px', fontSize: 12, fontFamily: 'DM Mono' }}>{totals.nl  || '—'}</td>
-                  <td style={{ textAlign: 'center', padding: '8px 10px', fontSize: 12, fontFamily: 'DM Mono' }}>{totals.cm  || '—'}</td>
-                  <td style={{ textAlign: 'center', padding: '8px 10px', fontSize: 12, fontFamily: 'DM Mono' }}>{totals.pm  || '—'}</td>
+                  <td style={{ padding: '8px 10px' }} />
+                  <td style={{ textAlign: 'center', padding: '8px 10px', fontSize: 12, fontFamily: 'DM Mono' }}>{totals.nl    || '—'}</td>
+                  <td style={{ textAlign: 'center', padding: '8px 10px', fontSize: 12, fontFamily: 'DM Mono' }}>{totals.cm    || '—'}</td>
+                  <td style={{ textAlign: 'center', padding: '8px 10px', fontSize: 12, fontFamily: 'DM Mono' }}>{totals.pm    || '—'}</td>
                   <td style={{ textAlign: 'center', padding: '8px 10px', fontSize: 12, fontFamily: 'DM Mono' }}>{totals.total || '—'}</td>
-                  <td style={{ textAlign: 'center', padding: '8px 10px', fontSize: 12, fontFamily: 'DM Mono' }}>{totals.sold || '—'}</td>
+                  <td style={{ textAlign: 'center', padding: '8px 10px', fontSize: 12, fontFamily: 'DM Mono' }}>{totals.sold  || '—'}</td>
                   <td style={{ textAlign: 'center', padding: '8px 10px', fontSize: 12, fontFamily: 'DM Mono' }}>{fmtG(totals.soldGrams)}</td>
                 </tr>
               </tfoot>
