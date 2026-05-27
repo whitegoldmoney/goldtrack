@@ -260,7 +260,6 @@ export default function App() {
             <img src="/WG_Logo_Blue.png" alt="White Gold" className="topbar-logo" />
           </div>
           <div className="topbar-right">
-            <span className="topbar-role">{roleLabel}</span>
             <button
               className="btn btn-outline btn-sm"
               style={{ color: 'var(--text3)', borderColor: 'rgba(255,255,255,.2)' }}
