@@ -3,8 +3,8 @@ import { supabase } from '../lib/supabase'
 import { Spinner } from './UI'
 
 export default function LoginScreen({ onLogin }) {
-  const [email, setEmail]   = useState('')
-  const [pass, setPass]     = useState('')
+  const [email, setEmail]   = useState(() => localStorage.getItem('goldtrack_saved_email') || '')
+  const [pass, setPass]     = useState(() => localStorage.getItem('goldtrack_saved_pass')  || '')
   const [loading, setLoading] = useState(false)
   const [err, setErr]       = useState('')
   // Default to checked; remember the last choice the user made
@@ -21,6 +21,8 @@ export default function LoginScreen({ onLogin }) {
       // Persist the preference and mark this as an active browser session
       localStorage.setItem('goldtrack_keep', keepSignedIn ? '1' : '0')
       localStorage.setItem('goldtrack_login_ts', Date.now().toString())
+      localStorage.setItem('goldtrack_saved_email', email.trim())
+      localStorage.setItem('goldtrack_saved_pass', pass)
       if (!keepSignedIn) sessionStorage.setItem('goldtrack_active', '1')
       else sessionStorage.removeItem('goldtrack_active')
       onLogin(data.user)
