@@ -5,6 +5,7 @@ import AllWalkIns from './AllWalkIns'
 import PendingAgentUpdates from './PendingAgentUpdates'
 import AgentHolds from './AgentHolds'
 import ImportData from '../admin/ImportData'
+import TeamManagement from '../admin/TeamManagement'
 
 export default function TLDashboard({ profile, branches, agents, toast }) {
   const [tab, setTab]   = useState('pending')
@@ -103,6 +104,11 @@ export default function TLDashboard({ profile, branches, agents, toast }) {
             ⬆ Import Data
           </button>
         )}
+        {profile.role === 'admin' && (
+          <button className={`tab-btn ${tab === 'teams' ? 'active' : ''}`} onClick={() => setTab('teams')}>
+            👥 Team Management
+          </button>
+        )}
       </div>
 
       {/* ── Tab content ── */}
@@ -112,6 +118,7 @@ export default function TLDashboard({ profile, branches, agents, toast }) {
       {tab === 'holds'           && <AgentHolds agents={agents} branches={branches} toast={toast} profile={profile} tls={tlProfiles} />}
       {tab === 'pending-updates' && <PendingAgentUpdates agents={agents} branches={branches} />}
       {tab === 'import'          && <ImportData branches={branches} agents={agents} profile={profile} toast={toast} />}
+      {tab === 'teams' && profile.role === 'admin' && <TeamManagement toast={toast} />}
     </div>
   )
 }

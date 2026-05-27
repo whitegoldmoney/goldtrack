@@ -147,6 +147,14 @@ tbody td{padding:11px 14px;vertical-align:middle}
 @keyframes wFadeIn{from{opacity:0}to{opacity:1}}
 @keyframes wFadeOut{from{opacity:1}to{opacity:0}}
 @keyframes wSlide{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.team-card{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:16px;overflow:hidden;box-shadow:var(--shadow)}
+.team-card-header{background:var(--dark);color:var(--white);padding:14px 16px;display:flex;align-items:center;justify-content:space-between}
+.team-card-header h3{font-size:15px;font-weight:600}
+.team-card-header>span{font-size:12px;background:var(--gold);color:var(--dark);padding:2px 10px;border-radius:20px;font-weight:600;flex-shrink:0}
+.team-card-body{padding:4px 16px}
+.agent-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;font-weight:500;gap:8px}
+.agent-row:last-child{border-bottom:none}
+.unassigned-card{background:#FFF8E1;border:1px solid #FFE082;border-radius:var(--radius);padding:16px}
 @keyframes wShimmer{0%{background-position:250% center}100%{background-position:-250% center}}
 .approvals-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;align-items:start}
 .sticky-card{background:#FFFDE7;border-radius:12px;border-left:4px solid var(--gold);padding:16px;box-shadow:0 3px 10px rgba(0,0,0,0.08),0 1px 3px rgba(0,0,0,0.05)}
