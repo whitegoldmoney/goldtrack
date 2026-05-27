@@ -201,7 +201,7 @@ export default function AgentPerformanceDashboard({ profile }) {
       ) : rows.length === 0 ? (
         <Empty icon="📊" text="No agents found for the selected filter." />
       ) : (
-        <div style={{ maxWidth: 800, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
           {totals.total === 0 && (
             <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 10 }}>
               No completed walk-ins for this period.
@@ -248,11 +248,6 @@ export default function AgentPerformanceDashboard({ profile }) {
                     >
                       <td style={TD({ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>
                         {r.agent.name}
-                        {profile.role === 'admin' && getTLName(r.agent.assigned_tl) && (
-                          <span style={{ fontSize: 10, color: 'var(--text3)', marginLeft: 6, fontWeight: 400 }}>
-                            {getTLName(r.agent.assigned_tl)}
-                          </span>
-                        )}
                       </td>
                       <td style={TD({ textAlign: 'center', fontFamily: 'DM Mono', color: 'var(--blue)' })}>{val(r.nl)}</td>
                       <td style={TD({ textAlign: 'center', fontFamily: 'DM Mono', color: '#E67E22' })}>{val(r.cm)}</td>
