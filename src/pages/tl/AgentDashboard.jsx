@@ -32,9 +32,23 @@ function buildStats(walkIns, agents) {
   })
 }
 
-// ── Source stats builder — derives sources dynamically from data ──
+// ── Master source list — all known lead sources ───────────────────
+const ALL_LEAD_SOURCES = [
+  'Google', 'WhatsApp Calls', 'Call Centre', 'CHATBOT', 'WEBFORM',
+  'Kerala Leads', 'Suvarna News', 'ROK Bus Campaign', 'Hordings Bus Shelters',
+  'Website', 'JUSTDAIL', 'Zee Kannada', 'Call Back', 'OLD CRM',
+  'BMTC Bus Campaign', 'Andhra Pradesh Calls', 'TV 9', 'Signage',
+  'Hathway', 'Social Media', 'LED Boards', 'Colors Kannada', 'Public TV',
+  'Vijaya Karnataka', 'Gnani', 'Social Media New', 'DEN Cable',
+  'Newspaper', 'News 18',
+]
+
+// ── Source stats builder — ALL sources always shown ───────────────
 function buildSourceStats(walkIns) {
-  const sources = [...new Set(walkIns.map(w => w.lead_source).filter(Boolean))]
+  // Also include any source values in the data that aren't in the master list
+  const extraSources = [...new Set(walkIns.map(w => w.lead_source).filter(Boolean))]
+    .filter(s => !ALL_LEAD_SOURCES.includes(s))
+  const sources = [...ALL_LEAD_SOURCES, ...extraSources]
   return sources
     .map(source => {
       const sl        = walkIns.filter(w => w.lead_source === source)
@@ -399,12 +413,7 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
             <span>📊</span> Source-wise Walk-ins
           </div>
 
-          {sourceRows.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 24, color: 'var(--text3)', fontSize: 13 }}>
-              No walk-ins with lead source data for this period.
-            </div>
-          ) : (
-            <div className="table-wrap">
+          <div className="table-wrap">
               <table style={{ tableLayout: 'fixed', width: '100%', borderCollapse: 'collapse' }}>
                 <colgroup>
                   <col style={{ width: '26%' }} /><col style={{ width: '9%' }} />
@@ -453,7 +462,6 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
                 </tfoot>
               </table>
             </div>
-          )}
 
         </div>
       )}
