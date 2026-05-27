@@ -165,7 +165,7 @@ export default function AgentPerformanceDashboard({ profile }) {
           <select
             value={teamFilter}
             onChange={e => setTeamFilter(e.target.value)}
-            style={{ fontSize: 12, padding: '5px 10px', borderRadius: 6, border: '1px solid var(--border2)', background: 'var(--white)', color: 'var(--text)' }}
+            style={{ fontSize: 12, padding: '5px 10px', borderRadius: 6, border: '1px solid var(--border2)', background: 'var(--white)', color: 'var(--text)', width: 160 }}
           >
             <option value="">All Teams</option>
             {tls.map(tl => (
@@ -201,7 +201,7 @@ export default function AgentPerformanceDashboard({ profile }) {
       ) : rows.length === 0 ? (
         <Empty icon="📊" text="No agents found for the selected filter." />
       ) : (
-        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1000 }}>
           {totals.total === 0 && (
             <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 10 }}>
               No completed walk-ins for this period.
