@@ -55,7 +55,7 @@ const TD = (extra = {}) => ({
 })
 
 const PERIOD_BTNS = ['Today', 'This Week', 'This Month']
-const DATE_INPUT  = { padding: '5px 10px', fontSize: 12, border: '1px solid var(--border2)', borderRadius: 6, background: 'var(--white)' }
+const DATE_INPUT  = { padding: '5px 10px', fontSize: 12, border: '1px solid var(--border2)', borderRadius: 6, background: 'var(--white)', width: 'auto' }
 
 export default function AgentPerformanceDashboard({ profile }) {
   const [period,        setPeriod]        = useState('Today')
@@ -112,11 +112,11 @@ export default function AgentPerformanceDashboard({ profile }) {
     ])
 
     let agents = agentList || []
-    if (profile.role === 'tl') {
-      agents = agents.filter(a => a.assigned_tl === profile.id)
-    } else if (profile.role === 'admin' && teamFilter) {
+    // Admin with team filter selected — narrow to that team only
+    if (profile.role === 'admin' && teamFilter) {
       agents = agents.filter(a => a.assigned_tl === teamFilter)
     }
+    // TL: show ALL agents (not just own team)
 
     setRows(buildStats(walkIns || [], agents))
     setLoading(false)
