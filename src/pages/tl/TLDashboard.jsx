@@ -89,7 +89,7 @@ export default function TLDashboard({ activePage, profile, branches, agents, toa
       {activePage === 'all'             && <AllWalkIns branches={branches} agents={agents} profile={profile} toast={toast} tls={tlProfiles} />}
       {activePage === 'holds'           && <AgentHolds agents={agents} branches={branches} toast={toast} profile={profile} tls={tlProfiles} />}
       {activePage === 'pending-updates' && <PendingAgentUpdates agents={agents} branches={branches} />}
-      {activePage === 'dashboard'       && <AgentPerformanceDashboard profile={profile} />}
+      {activePage === 'dashboard'       && <AgentPerformanceDashboard profile={profile} toast={toast} />}
       {activePage === 'import'          && <ImportData branches={branches} agents={agents} profile={profile} toast={toast} />}
       {activePage === 'teams' && profile.role === 'admin' && <TeamManagement toast={toast} />}
       {activePage === 'audit' && profile.role === 'admin' && <AuditLog profile={profile} />}

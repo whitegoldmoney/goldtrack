@@ -57,7 +57,7 @@ const TD = (extra = {}) => ({
 const PERIOD_BTNS = ['Today', 'This Week', 'This Month']
 const DATE_INPUT  = { padding: '5px 10px', fontSize: 12, border: '1px solid var(--border2)', borderRadius: 6, background: 'var(--white)', width: 'auto' }
 
-export default function AgentPerformanceDashboard({ profile }) {
+export default function AgentPerformanceDashboard({ profile, toast }) {
   const [period,        setPeriod]        = useState('Today')
   const [teamFilter,    setTeamFilter]    = useState('')
   const [hideZero,      setHideZero]      = useState(true)
@@ -147,6 +147,10 @@ export default function AgentPerformanceDashboard({ profile }) {
   // ── Apply custom range ────────────────────────────────────────
   function applyCustom() {
     if (!customFrom || !customTo) return
+    if (customFrom > customTo) {
+      toast('Start date cannot be after end date.', 'error')
+      return
+    }
     setAppliedRange({ from: customFrom + 'T00:00:00', to: customTo + 'T23:59:59.999' })
   }
 
