@@ -76,21 +76,6 @@ const TIME_SLOTS = [
   { label: '6–7 PM',   from: 18, to: 19 },
 ]
 
-// ── Hourly stats builder ──────────────────────────────────────────
-function buildHourlyStats(walkIns, agents) {
-  return TIME_SLOTS.map(slot => {
-    const slotWalkIns = walkIns.filter(w => {
-      const hour = new Date(w.created_at).getHours()
-      return hour >= slot.from && hour < slot.to
-    })
-    const agentCounts = {}
-    agents.forEach(agent => {
-      agentCounts[agent.id] = slotWalkIns.filter(w => w.submitted_by === agent.id).length
-    })
-    return { slot: slot.label, slotDef: slot, total: slotWalkIns.length, agentCounts }
-  })
-}
-
 // ── Source icon map ───────────────────────────────────────────────
 const SOURCE_ICONS = {
   'Google':               '🔍',
@@ -162,16 +147,15 @@ const DATE_INPUT  = {
 
 // ── Component ─────────────────────────────────────────────────────
 export default function AgentPerformanceDashboard({ profile, toast }) {
-  const [period,             setPeriod]             = useState('Today')
-  const [teamFilter,         setTeamFilter]         = useState('')
-  const [hideZero,           setHideZero]           = useState(true)
-  const [tls,                setTls]                = useState([])
-  const [rows,               setRows]               = useState([])
-  const [sourceRows,         setSourceRows]         = useState([])
-  const [hourlyRows,         setHourlyRows]         = useState([])
-  const [agentsFull,         setAgentsFull]         = useState([])
-  const [loading,            setLoading]            = useState(true)
-  const [showAgentBreakdown, setShowAgentBreakdown] = useState(false)
+  const [period,       setPeriod]       = useState('Today')
+  const [teamFilter,   setTeamFilter]   = useState('')
+  const [hideZero,     setHideZero]     = useState(true)
+  const [tls,          setTls]          = useState([])
+  const [rows,         setRows]         = useState([])
+  const [sourceRows,   setSourceRows]   = useState([])
+  const [walkInsRaw,   setWalkInsRaw]   = useState([])
+  const [agentsFull,   setAgentsFull]   = useState([])
+  const [loading,      setLoading]      = useState(true)
 
   // Custom date range
   const [showCustom,   setShowCustom]   = useState(false)
@@ -222,7 +206,7 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
     const wi = walkIns || []
     setRows(buildStats(wi, agents))
     setSourceRows(buildSourceStats(wi))
-    setHourlyRows(buildHourlyStats(wi, agents))
+    setWalkInsRaw(wi)
     setAgentsFull(agents)
     setLoading(false)
   }, [period, teamFilter, profile.id, profile.role, appliedRange])
@@ -247,26 +231,30 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
     soldGrams: sourceRows.reduce((s, r) => s + r.soldGrams, 0),
   }
 
-  // ── Hourly aggregates ─────────────────────────────────────────
-  const maxHourCount = Math.max(...hourlyRows.map(r => r.total), 1)
-  const peakSlot     = hourlyRows.reduce((best, r) => r.total > best.total ? r : best,
-                         { slot: '—', total: 0 })
-  const agentTotals  = agentsFull.map(agent => ({
-    name:  agent.name,
-    total: hourlyRows.reduce((s, r) => s + (r.agentCounts[agent.id] || 0), 0),
-  })).sort((a, b) => b.total - a.total)
-  const busiestAgent = agentTotals[0] || { name: '—', total: 0 }
+  // ── Hourly helpers ────────────────────────────────────────────
+  function getCount(agentId, slot) {
+    return walkInsRaw.filter(w => {
+      const hour = new Date(w.created_at).getHours()
+      return w.submitted_by === agentId && hour >= slot.from && hour < slot.to
+    }).length
+  }
 
-  const currentHour = new Date().getHours()
+  const slotTotals = TIME_SLOTS.map(slot => ({
+    slot,
+    total: agentsFull.reduce((sum, a) => sum + getCount(a.id, slot), 0),
+  }))
+  const peakSlot = slotTotals.length
+    ? slotTotals.reduce((max, s) => s.total > max.total ? s : max, slotTotals[0])
+    : null
+
+  const busiestAgent = agentsFull
+    .map(a => ({ name: a.name, total: walkInsRaw.filter(w => w.submitted_by === a.id).length }))
+    .sort((a, b) => b.total - a.total)[0] || { name: '—', total: 0 }
+
+  const currentHour   = new Date().getHours()
   const isCurrentSlot = slot =>
-    (period === 'Today' || (appliedRange === null && period === 'Today')) &&
     period === 'Today' && !appliedRange &&
     currentHour >= slot.from && currentHour < slot.to
-
-  const hourlyAgentTotals = agentsFull.reduce((acc, agent) => {
-    acc[agent.id] = hourlyRows.reduce((s, r) => s + (r.agentCounts[agent.id] || 0), 0)
-    return acc
-  }, {})
 
   const displayRows = hideZero ? rows.filter(r => r.total > 0) : rows
   const maxTotal    = Math.max(...rows.map(r => r.total), 0)
@@ -312,16 +300,19 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
       'Total Walk-ins': srcTotals.total, 'Walk-in Sold': srcTotals.sold, 'Sold Grams': srcTotals.soldGrams,
     })
 
-    // Sheet 3 — Hourly
-    const hourlyExportData = hourlyRows.map(r => ({
-      'Time Slot': r.slot,
-      'Total Walk-ins': r.total,
-      ...agentsFull.reduce((acc, a) => ({ ...acc, [a.name]: r.agentCounts[a.id] || 0 }), {}),
+    // Sheet 3 — Hourly (agents as rows, slots as columns)
+    const hourlyExportData = agentsFull.map(agent => ({
+      'Agent Name': agent.name,
+      ...TIME_SLOTS.reduce((acc, slot) => ({ ...acc, [slot.label]: getCount(agent.id, slot) }), {}),
+      'Total': TIME_SLOTS.reduce((sum, slot) => sum + getCount(agent.id, slot), 0),
     }))
     hourlyExportData.push({
-      'Time Slot': 'TOTAL',
-      'Total Walk-ins': hourlyRows.reduce((s, r) => s + r.total, 0),
-      ...agentsFull.reduce((acc, a) => ({ ...acc, [a.name]: hourlyAgentTotals[a.id] || 0 }), {}),
+      'Agent Name': 'TOTAL',
+      ...TIME_SLOTS.reduce((acc, slot) => ({
+        ...acc,
+        [slot.label]: agentsFull.reduce((s, a) => s + getCount(a.id, slot), 0),
+      }), {}),
+      'Total': walkInsRaw.length,
     })
 
     const wb = XLSX.utils.book_new()
@@ -533,170 +524,115 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
           <div style={DIVIDER} />
 
           {/* ════ Section 3: Hourly ════ */}
-          <div style={{ ...SEC_HDR, justifyContent: 'space-between' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>🕐</span> Hourly Walk-in Report
-            </span>
-            <button
-              className={`btn btn-sm ${showAgentBreakdown ? 'btn-dark' : 'btn-outline'}`}
-              onClick={() => setShowAgentBreakdown(b => !b)}
-              style={{ fontSize: 11 }}>
-              {showAgentBreakdown ? '📊 Simple View' : '👤 Agent Breakdown'}
-            </button>
+          <div style={SEC_HDR}>
+            <span>🕐</span> Hourly Walk-in Report
           </div>
 
           {/* Summary line */}
-          {peakSlot.total > 0 && (
+          {peakSlot && peakSlot.total > 0 && (
             <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 12 }}>
-              Peak hour: <strong>{peakSlot.slot}</strong> with <strong>{peakSlot.total} walk-in{peakSlot.total !== 1 ? 's' : ''}</strong>
-              {busiestAgent.total > 0 && (
-                <>&nbsp;·&nbsp;Busiest agent: <strong>{busiestAgent.name}</strong> ({busiestAgent.total} submitted)</>
-              )}
+              Peak hour: <strong style={{ color: 'var(--gold)' }}>{peakSlot.slot.label}</strong>
+              &nbsp;·&nbsp;
+              Busiest agent: <strong>{busiestAgent.name}</strong> ({busiestAgent.total} walk-in{busiestAgent.total !== 1 ? 's' : ''})
             </div>
           )}
 
-          {/* ── Simple View ── */}
-          {!showAgentBreakdown && (
-            <div className="table-wrap">
-              <table style={{ tableLayout: 'fixed', width: '100%', borderCollapse: 'collapse' }}>
-                <colgroup>
-                  <col style={{ width: '18%' }} />
-                  <col style={{ width: '12%' }} />
-                  <col style={{ width: '70%' }} />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th style={TH({ textAlign: 'left' })}>Time Slot</th>
-                    <th style={TH({ textAlign: 'center' })}>Count</th>
-                    <th style={TH({ textAlign: 'left' })}>Distribution</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {hourlyRows.map(r => {
-                    const isPeak    = r.total > 0 && r.total === maxHourCount
-                    const isLive    = isCurrentSlot(r.slotDef)
-                    const barPx     = Math.round((r.total / maxHourCount) * 160)
+          <div className="table-wrap" style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, tableLayout: 'fixed' }}>
+              <colgroup>
+                <col style={{ width: 160 }} />
+                {TIME_SLOTS.map(s => <col key={s.label} style={{ width: 80 }} />)}
+                <col style={{ width: 70 }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th style={{ ...TH({ textAlign: 'left' }), position: 'sticky', left: 0, zIndex: 2 }}>
+                    Agent Name
+                  </th>
+                  {TIME_SLOTS.map(slot => {
+                    const isPeakCol = peakSlot && slot.label === peakSlot.slot.label && peakSlot.total > 0
+                    const isLive    = isCurrentSlot(slot)
                     return (
-                      <tr key={r.slot} style={{
-                        borderBottom: '1px solid var(--border)',
-                        background: isPeak ? 'rgba(201,168,76,0.10)' : 'transparent',
-                        fontWeight: isPeak ? 600 : 400,
+                      <th key={slot.label} style={{
+                        ...TH({ textAlign: 'center', fontSize: 10 }),
+                        background: isPeakCol ? 'rgba(201,168,76,0.20)' : 'var(--surface2)',
+                        color:      isPeakCol ? 'var(--gold)' : 'var(--text2)',
                       }}>
-                        <td style={TD({ fontWeight: isPeak ? 700 : 500 })}>
-                          {r.slot}
-                          {isLive && (
-                            <span style={{ fontSize: 9, color: 'var(--green)', fontWeight: 700, marginLeft: 5 }}>
-                              ● LIVE
-                            </span>
-                          )}
-                        </td>
-                        <td style={TD({ textAlign: 'center', fontFamily: 'DM Mono', fontWeight: isPeak ? 700 : 400 })}>
-                          {r.total === 0
-                            ? <span style={{ color: 'var(--border2)' }}>—</span>
-                            : r.total}
-                        </td>
-                        <td style={TD({})}>
-                          {r.total > 0 && (
-                            <div style={{
-                              display: 'inline-block',
-                              width: barPx,
-                              height: 12,
-                              background: isPeak ? 'var(--gold)' : 'rgba(201,168,76,0.5)',
-                              borderRadius: 2,
-                              verticalAlign: 'middle',
-                              transition: 'width 0.3s ease',
-                            }} />
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr style={{ background: 'var(--dark)', color: 'var(--white)', fontWeight: 600 }}>
-                    <td style={{ padding: '8px 10px', fontSize: 12, letterSpacing: '.05em' }}>TOTAL</td>
-                    <td style={{ textAlign: 'center', padding: '8px 10px', fontSize: 12, fontFamily: 'DM Mono' }}>
-                      {hourlyRows.reduce((s, r) => s + r.total, 0) || '—'}
-                    </td>
-                    <td style={{ padding: '8px 10px' }} />
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          )}
-
-          {/* ── Agent Breakdown View ── */}
-          {showAgentBreakdown && (
-            <div className="table-wrap" style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
-                <thead>
-                  <tr>
-                    <th style={{ ...TH({ textAlign: 'left' }), width: 100, position: 'sticky', left: 0, zIndex: 1 }}>
-                      Time
-                    </th>
-                    <th style={{ ...TH({ textAlign: 'center' }), width: 70 }}>Total</th>
-                    {agentsFull.map(a => (
-                      <th key={a.id} style={{ ...TH({ textAlign: 'center' }), width: 64 }}>
-                        {a.name.split(' ')[0]}
+                        {slot.label}
+                        {isLive && (
+                          <span style={{ display: 'block', fontSize: 8, color: 'var(--green)', fontWeight: 700, marginTop: 1 }}>
+                            ● LIVE
+                          </span>
+                        )}
                       </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {hourlyRows.map(r => {
-                    const isPeak = r.total > 0 && r.total === maxHourCount
-                    const isLive = isCurrentSlot(r.slotDef)
-                    return (
-                      <tr key={r.slot} style={{
-                        borderBottom: '1px solid var(--border)',
-                        background: isPeak ? 'rgba(201,168,76,0.10)' : 'transparent',
-                      }}>
-                        <td style={{
-                          ...TD({ fontWeight: isPeak ? 700 : 500, whiteSpace: 'nowrap' }),
-                          position: 'sticky', left: 0,
-                          background: isPeak ? 'rgba(201,168,76,0.10)' : 'var(--white)',
-                        }}>
-                          {r.slot}
-                          {isLive && (
-                            <span style={{ fontSize: 9, color: 'var(--green)', fontWeight: 700, marginLeft: 5 }}>
-                              ● LIVE
-                            </span>
-                          )}
-                        </td>
-                        <td style={TD({ textAlign: 'center', fontFamily: 'DM Mono', fontWeight: isPeak ? 700 : 400 })}>
-                          {r.total === 0
-                            ? <span style={{ color: 'var(--border2)' }}>—</span>
-                            : r.total}
-                        </td>
-                        {agentsFull.map(a => (
-                          <td key={a.id} style={TD({ textAlign: 'center', fontFamily: 'DM Mono' })}>
-                            {(r.agentCounts[a.id] || 0) === 0
-                              ? <span style={{ color: 'var(--border2)' }}>—</span>
-                              : r.agentCounts[a.id]}
-                          </td>
-                        ))}
-                      </tr>
                     )
                   })}
-                </tbody>
-                <tfoot>
-                  <tr style={{ background: 'var(--dark)', color: 'var(--white)', fontWeight: 600 }}>
-                    <td style={{ padding: '8px 10px', fontSize: 12, letterSpacing: '.05em', position: 'sticky', left: 0, background: 'var(--dark)' }}>
-                      TOTAL
-                    </td>
-                    <td style={{ textAlign: 'center', padding: '8px 10px', fontSize: 12, fontFamily: 'DM Mono' }}>
-                      {hourlyRows.reduce((s, r) => s + r.total, 0) || '—'}
-                    </td>
-                    {agentsFull.map(a => (
-                      <td key={a.id} style={{ textAlign: 'center', padding: '8px 10px', fontSize: 12, fontFamily: 'DM Mono' }}>
-                        {hourlyAgentTotals[a.id] || '—'}
+                  <th style={{ ...TH({ textAlign: 'center' }), position: 'sticky', right: 0, zIndex: 2 }}>
+                    Total
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {agentsFull.map(agent => {
+                  const agentTotal = TIME_SLOTS.reduce((sum, slot) => sum + getCount(agent.id, slot), 0)
+                  if (hideZero && agentTotal === 0) return null
+                  return (
+                    <tr key={agent.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{
+                        ...TD({ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }),
+                        position: 'sticky', left: 0, background: 'var(--white)', zIndex: 1,
+                      }}>
+                        {agent.name}
                       </td>
-                    ))}
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          )}
+                      {TIME_SLOTS.map(slot => {
+                        const count     = getCount(agent.id, slot)
+                        const isPeakCol = peakSlot && slot.label === peakSlot.slot.label && peakSlot.total > 0
+                        return (
+                          <td key={slot.label} style={TD({
+                            textAlign: 'center', fontFamily: 'DM Mono',
+                            background: count > 0
+                              ? isPeakCol ? 'rgba(201,168,76,0.12)' : 'rgba(201,168,76,0.06)'
+                              : 'transparent',
+                            fontWeight: count > 0 ? 600 : 400,
+                            color:      count > 0 ? 'var(--text)' : 'var(--border2)',
+                          })}>
+                            {count > 0 ? count : '—'}
+                          </td>
+                        )
+                      })}
+                      <td style={{
+                        ...TD({ textAlign: 'center', fontFamily: 'DM Mono', fontWeight: 700 }),
+                        position: 'sticky', right: 0,
+                        background: agentTotal > 0 ? '#FDFBF4' : 'var(--white)',
+                        color: agentTotal > 0 ? 'var(--text)' : 'var(--text3)',
+                        borderLeft: '1px solid var(--border)',
+                      }}>
+                        {agentTotal > 0 ? agentTotal : '—'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+              <tfoot>
+                <tr style={{ background: 'var(--dark)', color: 'var(--white)', fontWeight: 600 }}>
+                  <td style={{ padding: '8px 10px', fontSize: 12, letterSpacing: '.05em', position: 'sticky', left: 0, background: 'var(--dark)', zIndex: 1 }}>
+                    TOTAL
+                  </td>
+                  {TIME_SLOTS.map(slot => {
+                    const slotTotal = agentsFull.reduce((sum, a) => sum + getCount(a.id, slot), 0)
+                    return (
+                      <td key={slot.label} style={{ textAlign: 'center', padding: '8px 6px', fontSize: 12, fontFamily: 'DM Mono' }}>
+                        {slotTotal || '—'}
+                      </td>
+                    )
+                  })}
+                  <td style={{ textAlign: 'center', padding: '8px 6px', fontSize: 12, fontFamily: 'DM Mono', position: 'sticky', right: 0, background: 'var(--dark)', borderLeft: '1px solid rgba(255,255,255,0.1)' }}>
+                    {agentsFull.reduce((sum, a) => sum + walkInsRaw.filter(w => w.submitted_by === a.id).length, 0) || '—'}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
 
         </div>
       )}
