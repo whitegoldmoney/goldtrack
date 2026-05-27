@@ -10,6 +10,12 @@ export default function PendingApprovals({ profile, branches, agents, toast, onA
   const [decisions, setDecisions]   = useState({})
   const [rejectReasons, setRejectReasons] = useState({})
   const [showReject, setShowReject] = useState({})
+  const [tls, setTls]               = useState([])
+
+  useEffect(() => {
+    supabase.from('profiles').select('id, name').eq('role', 'tl').order('name')
+      .then(({ data }) => setTls(data || []))
+  }, [])
 
   async function load() {
     setLoading(true)
@@ -149,7 +155,24 @@ export default function PendingApprovals({ profile, branches, agents, toast, onA
                 >
                   <option value="">— Assign Agent —</option>
                   <option value="old_lead">📁 Old Lead</option>
-                  {(teamAgentIds !== null ? agents.filter(a => teamAgentIds.includes(a.id)) : agents).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  {/* All agents grouped by TL team */}
+                  {tls.map(tl => {
+                    const tlAgents = agents.filter(a => a.assigned_tl === tl.id)
+                    if (!tlAgents.length) return null
+                    return (
+                      <optgroup key={tl.id} label={`${tl.name}'s Team`}>
+                        {tlAgents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                      </optgroup>
+                    )
+                  })}
+                  {/* Agents not assigned to any TL */}
+                  {agents.filter(a => !a.assigned_tl).length > 0 && (
+                    <optgroup label="Other">
+                      {agents.filter(a => !a.assigned_tl).map(a =>
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      )}
+                    </optgroup>
+                  )}
                 </select>
               )}
 
