@@ -2,13 +2,25 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 
 export default function RemarksUpdate({ profile, branches, toast, onCountChange }) {
-  const [rows, setRows]                     = useState([])
-  const [loading, setLoading]               = useState(false)
-  const [localRemarks, setLocalRemarks]     = useState({})
-  const [localBMRemarks, setLocalBMRemarks] = useState({})
-  const [saving, setSaving]                 = useState({})
-  const [savedAt, setSavedAt]               = useState({})   // id → Date — also doubles as lock flag
+  const [rows, setRows]                         = useState([])
+  const [loading, setLoading]                   = useState(false)
+  const [localRemarks, setLocalRemarks]         = useState({})
+  const [localBMRemarks, setLocalBMRemarks]     = useState({})
+  const [saving, setSaving]                     = useState({})
+  const [manuallyUnlocked, setManuallyUnlocked] = useState({})
 
+  // ── Lock logic ────────────────────────────────────────────────
+  // A card is locked if remarks_updated_at is set in DB AND the
+  // agent hasn't clicked "Edit" for that specific card this session.
+  function isLocked(row) {
+    return !!row.remarks_updated_at && !manuallyUnlocked[row.id]
+  }
+
+  function unlockCard(id) {
+    setManuallyUnlocked(u => ({ ...u, [id]: true }))
+  }
+
+  // ── Data fetching ─────────────────────────────────────────────
   async function load() {
     setLoading(true)
     const today = new Date().toISOString().split('T')[0]
@@ -28,6 +40,7 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
 
   useEffect(() => { load() }, [])
 
+  // ── Save ──────────────────────────────────────────────────────
   async function saveRemarks(row) {
     setSaving(s => ({ ...s, [row.id]: true }))
     const { error } = await supabase
@@ -45,12 +58,14 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
       toast(error.message, 'error')
     } else {
       toast('Remarks saved!', 'success')
-      setSavedAt(s => ({ ...s, [row.id]: new Date() }))  // lock the card
+      // Re-lock: remove from manuallyUnlocked so DB value takes over
+      setManuallyUnlocked(u => { const n = { ...u }; delete n[row.id]; return n })
       load()
     }
     setSaving(s => ({ ...s, [row.id]: false }))
   }
 
+  // ── Helpers ───────────────────────────────────────────────────
   function branchName(id) {
     return branches.find(b => b.id === id)?.name || '—'
   }
@@ -63,12 +78,21 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
     })
   }
 
+  function savedTimeStr(row) {
+    if (!row.remarks_updated_at) return ''
+    return new Date(row.remarks_updated_at).toLocaleTimeString('en-IN', {
+      hour: '2-digit', minute: '2-digit', hour12: true,
+    })
+  }
+
+  // ── Render ────────────────────────────────────────────────────
   if (loading) return (
     <div style={{ padding: 40, textAlign: 'center', color: 'var(--text3)' }}>Loading…</div>
   )
 
   return (
     <div style={{ maxWidth: 760 }}>
+
       {/* ── Header ── */}
       <div style={{ marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Remarks Update</h2>
@@ -95,40 +119,18 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {rows.map(row => {
-            // Lock if saved in this session OR if DB shows remarks were previously saved
-            const isLocked = !!savedAt[row.id] || !!row.remarks_updated_at
-            const savedTime = savedAt[row.id]
-              ? savedAt[row.id].toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
-              : row.remarks_updated_at
-                ? new Date(row.remarks_updated_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
-                : null
-            const phone    = row.customer_mobile || row.phone || '—'
+            const locked = isLocked(row)
+            const phone  = row.customer_mobile || row.phone || '—'
 
             return (
               <div key={row.id} style={{
-                background:    isLocked ? '#f4f4f4' : 'var(--white)',
-                borderRadius:  10,
-                border:       `1px solid ${isLocked ? '#ccc' : 'var(--border)'}`,
-                borderLeft:   `3px solid ${isLocked ? '#999' : 'var(--gold)'}`,
-                padding:       16,
-                position:      'relative',
-                opacity:       isLocked ? 0.65 : 1,
-                pointerEvents: isLocked ? 'none' : 'auto',
-                transition:    'opacity 0.25s, background 0.25s',
+                background:   locked ? 'var(--surface)' : 'var(--white)',
+                borderRadius: 10,
+                border:       '1px solid var(--border)',
+                borderLeft:   `3px solid ${locked ? 'var(--green)' : 'var(--gold)'}`,
+                padding:      16,
+                transition:   'background 0.2s, border-color 0.2s',
               }}>
-
-                {/* ── Saved overlay stamp ── */}
-                {isLocked && (
-                  <div style={{
-                    position: 'absolute', top: 12, right: 14,
-                    background: '#1e1e1e', color: '#fff',
-                    fontSize: 11, fontWeight: 700,
-                    padding: '3px 10px', borderRadius: 20,
-                    letterSpacing: '0.03em',
-                  }}>
-                    ✓ Saved {savedTime}
-                  </div>
-                )}
 
                 {/* ── Info grid ── */}
                 <div style={{
@@ -162,10 +164,15 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
                     REMARKS (optional)
                   </label>
                   <select
-                    disabled={isLocked}
+                    disabled={locked}
                     value={localRemarks[row.id] ?? row.remarks ?? ''}
                     onChange={e => setLocalRemarks(r => ({ ...r, [row.id]: e.target.value }))}
-                    style={{ width: '100%', fontSize: 13 }}
+                    style={{
+                      width: '100%', fontSize: 13,
+                      opacity:    locked ? 0.6 : 1,
+                      background: locked ? 'var(--surface)' : 'var(--white)',
+                      cursor:     locked ? 'not-allowed' : 'default',
+                    }}
                   >
                     <option value="">— Select Remarks —</option>
                     <option value="Price Enquiry">Price Enquiry</option>
@@ -187,24 +194,57 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
                     BRANCH MANAGER REMARKS (optional)
                   </label>
                   <textarea
-                    disabled={isLocked}
+                    disabled={locked}
                     value={localBMRemarks[row.id] ?? row.bm_remarks ?? ''}
                     onChange={e => setLocalBMRemarks(r => ({ ...r, [row.id]: e.target.value }))}
                     placeholder="e.g. Customer will come tomorrow, branch manager confirmed..."
-                    style={{ width: '100%', minHeight: 60, fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }}
+                    style={{
+                      width: '100%', minHeight: 60, fontSize: 13,
+                      boxSizing: 'border-box',
+                      opacity:    locked ? 0.6 : 1,
+                      background: locked ? 'var(--surface)' : 'var(--white)',
+                      cursor:     locked ? 'not-allowed' : 'default',
+                      resize:     locked ? 'none' : 'vertical',
+                    }}
                   />
                 </div>
 
-                {/* ── Save button ── */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <button
-                    className="btn btn-dark"
-                    style={{ padding: '7px 18px', fontSize: 13 }}
-                    onClick={() => saveRemarks(row)}
-                    disabled={saving[row.id] || isLocked}
-                  >
-                    {saving[row.id] ? 'Saving…' : '💾 Save Remarks'}
-                  </button>
+                {/* ── Action row ── */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  {locked ? (
+                    <>
+                      <button
+                        className="btn btn-success btn-sm"
+                        disabled
+                        style={{ opacity: 0.85, cursor: 'default' }}
+                      >
+                        ✓ Remarks Saved
+                        {row.remarks_updated_at && (
+                          <span style={{ fontSize: 11, marginLeft: 6, fontWeight: 400 }}>
+                            at {savedTimeStr(row)}
+                          </span>
+                        )}
+                      </button>
+                      <button
+                        className="btn btn-outline btn-sm"
+                        style={{ fontSize: 11 }}
+                        onClick={() => unlockCard(row.id)}
+                      >
+                        ✏️ Edit
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      className="btn btn-dark btn-sm"
+                      style={{ padding: '7px 18px', fontSize: 13 }}
+                      onClick={() => saveRemarks(row)}
+                      disabled={saving[row.id]}
+                    >
+                      {saving[row.id]
+                        ? <><span className="spinner" style={{ borderTopColor: 'var(--gold)', width: 12, height: 12, borderWidth: 2, marginRight: 6 }} />Saving…</>
+                        : '💾 Save Remarks'}
+                    </button>
+                  )}
                 </div>
 
               </div>
