@@ -1,6 +1,29 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 
+const LBL = {
+  fontSize: 10, fontWeight: 600, color: 'var(--text2)',
+  textTransform: 'uppercase', letterSpacing: '.04em',
+  display: 'block', marginBottom: 3,
+}
+const SEL = {
+  width: '100%', padding: '6px 10px', fontSize: 12,
+  borderRadius: 6, border: '1px solid var(--border2)',
+  marginBottom: 8, background: 'var(--white)',
+  fontFamily: 'inherit',
+}
+const INP = {
+  width: '100%', padding: '6px 10px', fontSize: 12,
+  borderRadius: 6, border: '1px solid var(--border2)',
+  marginBottom: 8, boxSizing: 'border-box',
+}
+const TA = {
+  width: '100%', padding: '6px 10px', fontSize: 12,
+  minHeight: 50, maxHeight: 80, borderRadius: 6,
+  border: '1px solid var(--border2)', resize: 'none',
+  marginBottom: 8, boxSizing: 'border-box', fontFamily: 'inherit',
+}
+
 export default function RemarksUpdate({ profile, branches, toast, onCountChange }) {
   const [rows, setRows]                         = useState([])
   const [loading, setLoading]                   = useState(false)
@@ -14,36 +37,30 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
   function isLocked(row) {
     return !!row.remarks_updated_at && !manuallyUnlocked[row.id]
   }
-
   function unlockCard(id) {
     setManuallyUnlocked(u => ({ ...u, [id]: true }))
   }
 
-  // ── Data fetching ─────────────────────────────────────────────
+  // ── Data ──────────────────────────────────────────────────────
   async function load() {
     setLoading(true)
     const today = new Date().toISOString().split('T')[0]
     const { data } = await supabase
-      .from('walk_ins')
-      .select('*')
+      .from('walk_ins').select('*')
       .eq('submitted_by', profile.id)
       .gte('created_at', today + 'T00:00:00')
       .lte('created_at', today + 'T23:59:59')
       .not('status', 'eq', 'draft')
       .order('created_at', { ascending: false })
-
     setRows(data || [])
     if (onCountChange) onCountChange((data || []).filter(w => !w.remarks).length)
     setLoading(false)
   }
-
   useEffect(() => { load() }, [])
 
   // ── Save ──────────────────────────────────────────────────────
   async function saveRemarks(row) {
     const remarks = localRemarks[row.id] ?? row.remarks ?? null
-
-    // Validate: grams_sold required when Sold
     if (remarks === 'Sold') {
       const grams = localSoldGrams[row.id] ?? row.grams_sold
       if (!grams || parseFloat(grams) <= 0) {
@@ -51,7 +68,6 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
         return
       }
     }
-
     setSaving(s => ({ ...s, [row.id]: true }))
     const { error } = await supabase
       .from('walk_ins')
@@ -64,9 +80,7 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
         remarks_updated_at: new Date().toISOString(),
         remarks_updated_by: profile.id,
       })
-      .eq('id', row.id)
-      .eq('submitted_by', profile.id)
-
+      .eq('id', row.id).eq('submitted_by', profile.id)
     if (error) {
       toast(error.message, 'error')
     } else {
@@ -78,11 +92,9 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
   }
 
   // ── Helpers ───────────────────────────────────────────────────
-  function branchName(id) {
-    return branches.find(b => b.id === id)?.name || '—'
-  }
+  const branchName = id => branches.find(b => b.id === id)?.name || '—'
 
-  function formatTime(ts) {
+  function fmt(ts) {
     if (!ts) return '—'
     return new Date(ts).toLocaleString('en-IN', {
       day: '2-digit', month: 'short',
@@ -103,8 +115,7 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
   )
 
   return (
-    <div style={{ maxWidth: 760 }}>
-
+    <div>
       {/* ── Header ── */}
       <div style={{ marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Remarks Update</h2>
@@ -129,156 +140,135 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
           </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        /* ── Grid ── */
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+          gap: 16,
+          alignItems: 'start',
+        }}>
           {rows.map(row => {
-            const locked      = isLocked(row)
-            const phone       = row.customer_mobile || row.phone || '—'
+            const locked       = isLocked(row)
+            const phone        = row.customer_mobile || row.phone || '—'
             const activeRemark = localRemarks[row.id] ?? row.remarks ?? ''
 
             return (
               <div key={row.id} style={{
-                background:   locked ? 'var(--surface)' : 'var(--white)',
-                borderRadius: 10,
-                border:       '1px solid var(--border)',
-                borderLeft:   `3px solid ${locked ? 'var(--green)' : 'var(--gold)'}`,
-                padding:      16,
-                transition:   'background 0.2s, border-color 0.2s',
+                background:  locked ? 'var(--surface)' : '#FFFDE7',
+                borderRadius: 12,
+                border:      '1px solid var(--border)',
+                borderLeft:  `4px solid ${locked ? 'var(--green)' : 'var(--gold)'}`,
+                padding:     14,
+                boxShadow:   '0 3px 10px rgba(0,0,0,0.06)',
               }}>
 
-                {/* ── Info grid ── */}
-                <div style={{
-                  display: 'grid', gridTemplateColumns: '1fr 1fr',
-                  gap: '4px 16px', marginBottom: 14,
-                }}>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>
-                    👤 {row.customer_name}
-                  </div>
-                  <div style={{ fontSize: 13, color: 'var(--text2)' }}>
-                    📞 {phone}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text2)' }}>
-                    🏦 {branchName(row.branch_id)}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text2)' }}>
-                    ⚖️ {row.walk_in_type === 'tele_sales' ? 'Tele Sales' : 'Direct'}
-                    {row.gold_weight ? ` · ${row.gold_weight}g` : ''}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', gridColumn: '1 / -1' }}>
-                    🕐 Submitted: {formatTime(row.created_at)}
-                  </div>
-                </div>
-
-                {/* ── Remarks dropdown ── */}
+                {/* ── Customer info ── */}
                 <div style={{ marginBottom: 10 }}>
-                  <label style={{
-                    fontSize: 11, fontWeight: 600, color: 'var(--text3)',
-                    display: 'block', marginBottom: 4, letterSpacing: '0.04em',
-                  }}>
-                    REMARKS (optional)
-                  </label>
-                  <select
-                    disabled={locked}
-                    value={activeRemark}
-                    onChange={e => setLocalRemarks(r => ({ ...r, [row.id]: e.target.value }))}
-                    style={{
-                      width: '100%', fontSize: 13,
-                      opacity:    locked ? 0.6 : 1,
-                      background: locked ? 'var(--surface)' : 'var(--white)',
-                      cursor:     locked ? 'not-allowed' : 'default',
-                    }}
-                  >
-                    <option value="">— Select Remarks —</option>
-                    <option value="Price Enquiry">Price Enquiry</option>
-                    <option value="Taken Quotation">Taken Quotation</option>
-                    <option value="Sold">Sold</option>
-                    <option value="Not Interested">Not Interested</option>
-                    <option value="Call Back">Call Back</option>
-                    <option value="Already Pledged">Already Pledged</option>
-                    <option value="Came for Release">Came for Release</option>
-                  </select>
-                </div>
-
-                {/* ── Sold Grams — only when Sold is selected ── */}
-                {activeRemark === 'Sold' && (
-                  <div style={{ marginBottom: 10 }}>
-                    <label style={{
-                      fontSize: 11, fontWeight: 600, color: 'var(--text3)',
-                      display: 'block', marginBottom: 4, letterSpacing: '0.04em',
-                    }}>
-                      SOLD GRAMS *{' '}
-                      <span style={{ color: 'var(--red)', fontSize: 10, fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
-                        Required when Sold
+                  <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
+                    {row.customer_name}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text2)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <span>📞 {phone}</span>
+                    <span>🏦 {branchName(row.branch_id)}</span>
+                    {(row.gold_type || row.walk_in_type) && (
+                      <span>⚖️ {row.gold_type || (row.walk_in_type === 'tele_sales' ? 'Tele Sales' : 'Direct')}
+                        {(row.grams || row.gold_weight) ? ` · ${row.grams || row.gold_weight}g` : ''}
                       </span>
-                    </label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      placeholder="Enter grams sold e.g. 10.5"
-                      disabled={locked}
-                      value={localSoldGrams[row.id] ?? row.grams_sold ?? ''}
-                      onChange={e => setLocalSoldGrams(s => ({ ...s, [row.id]: e.target.value }))}
-                      style={{
-                        width: '100%', fontSize: 13,
-                        opacity:    locked ? 0.6 : 1,
-                        background: locked ? 'var(--surface)' : 'var(--white)',
-                        cursor:     locked ? 'not-allowed' : 'default',
-                      }}
-                    />
+                    )}
                   </div>
-                )}
-
-                {/* ── Saved grams display on locked card ── */}
-                {locked && row.remarks === 'Sold' && row.grams_sold && (
-                  <div style={{ fontSize: 12, color: 'var(--green)', marginBottom: 10, fontWeight: 500 }}>
-                    💰 Sold: {row.grams_sold}g
+                  <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 3 }}>
+                    🕐 {fmt(row.created_at)}
                   </div>
-                )}
-
-                {/* ── BM Remarks textarea ── */}
-                <div style={{ marginBottom: 12 }}>
-                  <label style={{
-                    fontSize: 11, fontWeight: 600, color: 'var(--text3)',
-                    display: 'block', marginBottom: 4, letterSpacing: '0.04em',
-                  }}>
-                    BRANCH MANAGER REMARKS (optional)
-                  </label>
-                  <textarea
-                    disabled={locked}
-                    value={localBMRemarks[row.id] ?? row.bm_remarks ?? ''}
-                    onChange={e => setLocalBMRemarks(r => ({ ...r, [row.id]: e.target.value }))}
-                    placeholder="e.g. Customer will come tomorrow, branch manager confirmed..."
-                    style={{
-                      width: '100%', minHeight: 60, fontSize: 13,
-                      boxSizing: 'border-box',
-                      opacity:    locked ? 0.6 : 1,
-                      background: locked ? 'var(--surface)' : 'var(--white)',
-                      cursor:     locked ? 'not-allowed' : 'default',
-                      resize:     locked ? 'none' : 'vertical',
-                    }}
-                  />
                 </div>
+
+                {/* ── Locked: show saved values ── */}
+                {locked && row.remarks && (
+                  <div style={{
+                    fontSize: 11, color: 'var(--text2)', marginBottom: 6,
+                    padding: '4px 8px', background: 'var(--white)', borderRadius: 4,
+                  }}>
+                    📝 {row.remarks}
+                    {row.grams_sold && (
+                      <span style={{ color: 'var(--green)', marginLeft: 6 }}>
+                        · 💰 {row.grams_sold}g
+                      </span>
+                    )}
+                  </div>
+                )}
+                {locked && row.bm_remarks && (
+                  <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8, fontStyle: 'italic' }}>
+                    "{row.bm_remarks}"
+                  </div>
+                )}
+
+                {/* ── Editable fields (hidden when locked) ── */}
+                {!locked && (
+                  <>
+                    {/* Remarks */}
+                    <div>
+                      <label style={LBL}>Remarks</label>
+                      <select
+                        value={activeRemark}
+                        onChange={e => setLocalRemarks(r => ({ ...r, [row.id]: e.target.value }))}
+                        style={SEL}
+                      >
+                        <option value="">— Select Remarks —</option>
+                        <option value="Price Enquiry">Price Enquiry</option>
+                        <option value="Taken Quotation">Taken Quotation</option>
+                        <option value="Sold">Sold</option>
+                        <option value="Not Interested">Not Interested</option>
+                        <option value="Call Back">Call Back</option>
+                        <option value="Already Pledged">Already Pledged</option>
+                        <option value="Came for Release">Came for Release</option>
+                      </select>
+                    </div>
+
+                    {/* Sold Grams — conditional */}
+                    {activeRemark === 'Sold' && (
+                      <div>
+                        <label style={{ ...LBL, color: 'var(--red)' }}>Sold Grams *</label>
+                        <input
+                          type="number" step="0.1" min="0"
+                          placeholder="e.g. 10.5"
+                          value={localSoldGrams[row.id] ?? row.grams_sold ?? ''}
+                          onChange={e => setLocalSoldGrams(s => ({ ...s, [row.id]: e.target.value }))}
+                          style={{ ...INP, border: '1px solid var(--red)' }}
+                        />
+                      </div>
+                    )}
+
+                    {/* BM Remarks */}
+                    <div>
+                      <label style={LBL}>BM Remarks</label>
+                      <textarea
+                        value={localBMRemarks[row.id] ?? row.bm_remarks ?? ''}
+                        onChange={e => setLocalBMRemarks(r => ({ ...r, [row.id]: e.target.value }))}
+                        placeholder="Branch manager notes…"
+                        style={TA}
+                      />
+                    </div>
+                  </>
+                )}
 
                 {/* ── Action row ── */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: locked ? 4 : 0 }}>
                   {locked ? (
                     <>
                       <button
-                        className="btn btn-success btn-sm"
+                        className="btn btn-sm"
                         disabled
-                        style={{ opacity: 0.85, cursor: 'default' }}
+                        style={{
+                          background: '#eafaf1', color: 'var(--green)',
+                          border: '1px solid #a9dfbf', fontSize: 11, padding: '4px 10px',
+                          cursor: 'default', opacity: 0.9,
+                        }}
                       >
-                        ✓ Remarks Saved
-                        {row.remarks_updated_at && (
-                          <span style={{ fontSize: 11, marginLeft: 6, fontWeight: 400 }}>
-                            at {savedTimeStr(row)}
-                          </span>
-                        )}
+                        ✓ Saved {savedTimeStr(row)}
                       </button>
                       <button
                         className="btn btn-outline btn-sm"
-                        style={{ fontSize: 11 }}
                         onClick={() => unlockCard(row.id)}
+                        style={{ fontSize: 11, padding: '4px 10px' }}
                       >
                         ✏️ Edit
                       </button>
@@ -286,13 +276,13 @@ export default function RemarksUpdate({ profile, branches, toast, onCountChange 
                   ) : (
                     <button
                       className="btn btn-dark btn-sm"
-                      style={{ padding: '7px 18px', fontSize: 13 }}
                       onClick={() => saveRemarks(row)}
                       disabled={saving[row.id]}
+                      style={{ fontSize: 11, padding: '5px 12px' }}
                     >
                       {saving[row.id]
                         ? <><span className="spinner" style={{ borderTopColor: 'var(--gold)', width: 12, height: 12, borderWidth: 2, marginRight: 6 }} />Saving…</>
-                        : '💾 Save Remarks'}
+                        : '💾 Save'}
                     </button>
                   )}
                 </div>
