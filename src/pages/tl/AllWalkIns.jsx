@@ -9,7 +9,7 @@ const displaySource = s => srcLabel[s] || s || '—'
 export default function AllWalkIns({ branches, agents, profile, toast, tls = [] }) {
   const [rows, setRows]         = useState([])
   const [loading, setLoading]   = useState(true)
-  const [filter, setFilter]     = useState({ status: '', type: '', date: '', search: '', team: '' })
+  const [filter, setFilter]     = useState({ status: '', type: '', date: '', search: '', team: '', remarks: '' })
   const [editing, setEditing]   = useState(null)
   const [saving, setSaving]     = useState(false)
   const [deleting, setDeleting] = useState(null)
@@ -40,11 +40,18 @@ export default function AllWalkIns({ branches, agents, profile, toast, tls = [] 
     return tl ? `${tl.name.split(' ')[0]}'s Team` : '—'
   }
 
-  // Client-side filtering: team filter + search
+  // Client-side filtering: team + remarks + search
   const filtered = rows.filter(r => {
     if (filter.team) {
       const agent = agents.find(a => a.id === r.submitted_by)
       if ((agent?.assigned_tl || '') !== filter.team) return false
+    }
+    if (filter.remarks) {
+      if (filter.remarks === '__none__') {
+        if (r.remarks) return false
+      } else {
+        if (r.remarks !== filter.remarks) return false
+      }
     }
     if (!filter.search) return true
     const s = filter.search.toLowerCase()
@@ -114,6 +121,17 @@ export default function AllWalkIns({ branches, agents, profile, toast, tls = [] 
           {tls.map(t => (
             <option key={t.id} value={t.id}>{t.name.split(' ')[0]}'s Team</option>
           ))}
+        </select>
+        <select value={filter.remarks} onChange={e => setFilter(f => ({ ...f, remarks: e.target.value }))}>
+          <option value="">All Remarks</option>
+          <option value="__none__">— No Remarks —</option>
+          <option value="Price Enquiry">Price Enquiry</option>
+          <option value="Taken Quotation">Taken Quotation</option>
+          <option value="Sold">Sold</option>
+          <option value="Not Interested">Not Interested</option>
+          <option value="Call Back">Call Back</option>
+          <option value="Already Pledged">Already Pledged</option>
+          <option value="Came for Release">Came for Release</option>
         </select>
         <input type="date" value={filter.date} onChange={e => setFilter(f => ({ ...f, date: e.target.value }))} />
         <button className="btn btn-outline btn-sm" onClick={load}>↻ Refresh</button>
