@@ -9,7 +9,7 @@ const displaySource = s => srcLabel[s] || s || '—'
 export default function AllWalkIns({ branches, agents, profile, toast, tls = [] }) {
   const [rows, setRows]         = useState([])
   const [loading, setLoading]   = useState(true)
-  const [filter, setFilter]     = useState({ status: '', type: '', date: '', search: '', team: '', remarks: '' })
+  const [filter, setFilter]     = useState({ status: '', type: '', dateFrom: '', dateTo: '', search: '', team: '', remarks: '' })
   const [editing, setEditing]   = useState(null)
   const [saving, setSaving]     = useState(false)
   const [deleting, setDeleting] = useState(null)
@@ -23,11 +23,12 @@ export default function AllWalkIns({ branches, agents, profile, toast, tls = [] 
     let q = supabase.from('walk_ins').select('*').neq('status', 'draft').order('created_at', { ascending: false }).limit(500)
     if (filter.status) q = q.eq('status', filter.status)
     if (filter.type)   q = q.eq('walk_in_type', filter.type)
-    if (filter.date)   q = q.eq('visit_date', filter.date)
+    if (filter.dateFrom) q = q.gte('visit_date', filter.dateFrom)
+    if (filter.dateTo)   q = q.lte('visit_date', filter.dateTo)
     const { data } = await q
     setRows(data || []); setLoading(false)
   }
-  useEffect(() => { load() }, [filter.status, filter.type, filter.date])
+  useEffect(() => { load() }, [filter.status, filter.type, filter.dateFrom, filter.dateTo])
 
   const branchName = id => (branches.find(b => b.id === id) || {}).name || '—'
   const agentName  = id => (agents.find(a => a.id === id) || {}).name  || '—'
@@ -133,7 +134,13 @@ export default function AllWalkIns({ branches, agents, profile, toast, tls = [] 
           <option value="Already Pledged">Already Pledged</option>
           <option value="Came for Release">Came for Release</option>
         </select>
-        <input type="date" value={filter.date} onChange={e => setFilter(f => ({ ...f, date: e.target.value }))} />
+        <input type="date" value={filter.dateFrom}
+          onChange={e => setFilter(f => ({ ...f, dateFrom: e.target.value }))}
+          placeholder="From" title="Walk-in date from" />
+        <span style={{ fontSize: 12, color: 'var(--text3)' }}>to</span>
+        <input type="date" value={filter.dateTo}
+          onChange={e => setFilter(f => ({ ...f, dateTo: e.target.value }))}
+          placeholder="To" title="Walk-in date to" />
         <button className="btn btn-outline btn-sm" onClick={load}>↻ Refresh</button>
       </div>
 
