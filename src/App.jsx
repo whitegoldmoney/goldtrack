@@ -222,6 +222,12 @@ export default function App() {
         { key: 'import', icon: '📥', label: 'Import Data' },
       ],
     },
+    ...(profile.role === 'admin' ? [{
+      section: 'LOGS',
+      items: [
+        { key: 'audit', icon: '📋', label: 'Audit Log' },
+      ],
+    }] : []),
   ]
 
   const navSections = profile.role === 'agent' ? agentNav : tlNav
@@ -254,7 +260,6 @@ export default function App() {
             <img src="/WG_Logo_Blue.png" alt="White Gold" className="topbar-logo" />
           </div>
           <div className="topbar-right">
-            <span className="topbar-user">{profile.name}</span>
             <span className="topbar-role">{roleLabel}</span>
             <button
               className="btn btn-outline btn-sm"

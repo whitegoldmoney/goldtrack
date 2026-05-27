@@ -7,6 +7,7 @@ import AgentHolds from './AgentHolds'
 import ImportData from '../admin/ImportData'
 import TeamManagement from '../admin/TeamManagement'
 import AgentPerformanceDashboard from './AgentDashboard'
+import AuditLog from '../admin/AuditLog'
 
 export default function TLDashboard({ activePage, profile, branches, agents, toast, onBadgesUpdate }) {
   const [stats, setStats]         = useState({ pending: 0, today: 0, tele: 0, direct: 0, completed: 0, holds: 0 })
@@ -91,6 +92,7 @@ export default function TLDashboard({ activePage, profile, branches, agents, toa
       {activePage === 'dashboard'       && <AgentPerformanceDashboard profile={profile} />}
       {activePage === 'import'          && <ImportData branches={branches} agents={agents} profile={profile} toast={toast} />}
       {activePage === 'teams' && profile.role === 'admin' && <TeamManagement toast={toast} />}
+      {activePage === 'audit' && profile.role === 'admin' && <AuditLog profile={profile} />}
     </div>
   )
 }
