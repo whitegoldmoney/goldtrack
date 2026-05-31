@@ -3,18 +3,18 @@ import * as XLSX from 'xlsx'
 import { supabase } from '../../lib/supabase'
 import { Loading, Empty } from '../../components/UI'
 
-// ── Date range helper ─────────────────────────────────────────────
+// ── Date range helper — returns plain date strings for visit_date ─
 function getDateRange(period) {
-  const todayStr = new Date().toISOString().split('T')[0]
+  const today = new Date().toISOString().split('T')[0]
   if (period === 'Today')
-    return { from: `${todayStr}T00:00:00`, to: `${todayStr}T23:59:59.999` }
+    return { from: today, to: today }
   if (period === 'This Week') {
-    const d = new Date(); d.setDate(d.getDate() - d.getDay())
-    return { from: `${d.toISOString().split('T')[0]}T00:00:00`, to: `${todayStr}T23:59:59.999` }
+    const d = new Date(); d.setDate(d.getDate() - d.getDay() + 1) // Monday
+    return { from: d.toISOString().split('T')[0], to: today }
   }
   if (period === 'This Month')
-    return { from: `${todayStr.slice(0, 7)}-01T00:00:00`, to: `${todayStr}T23:59:59.999` }
-  return { from: '2020-01-01T00:00:00', to: `${todayStr}T23:59:59.999` }
+    return { from: `${today.slice(0, 7)}-01`, to: today }
+  return { from: '2020-01-01', to: today }
 }
 
 // ── Agent stats builder ───────────────────────────────────────────
@@ -204,10 +204,10 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
 
     const [{ data: walkIns }, { data: agentList }] = await Promise.all([
       supabase.from('walk_ins')
-        .select('id, customer_name, assigned_agent_id, submitted_by, lead_source, walkin_status, remarks, grams_sold, grams, created_at, status, walk_in_type')
+        .select('id, customer_name, assigned_agent_id, submitted_by, lead_source, walkin_status, remarks, grams_sold, grams, created_at, visit_date, status, walk_in_type')
         .eq('status', 'completed')
-        .gte('updated_at', from)
-        .lte('updated_at', to),
+        .gte('visit_date', from)
+        .lte('visit_date', to),
       supabase.from('profiles').select('id, name, assigned_tl')
         .eq('role', 'agent').order('name'),
     ])
@@ -279,7 +279,7 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
   function applyCustom() {
     if (!customFrom || !customTo) return
     if (customFrom > customTo) { toast('Start date cannot be after end date.', 'error'); return }
-    setAppliedRange({ from: customFrom + 'T00:00:00', to: customTo + 'T23:59:59.999' })
+    setAppliedRange({ from: customFrom, to: customTo })
   }
 
   // ── Excel export ──────────────────────────────────────────────
