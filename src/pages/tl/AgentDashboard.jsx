@@ -20,46 +20,58 @@ function getDateRange(period) {
 // ── Agent stats builder ───────────────────────────────────────────
 function buildStats(walkIns, agents) {
   return agents.map(agent => {
-    const leads     = walkIns.filter(w => w.assigned_agent_id === agent.id)
-    const nl        = leads.filter(w => w.walkin_status === 'NL').length
-    const cm        = leads.filter(w => w.walkin_status === 'CM').length
-    const pm        = leads.filter(w => w.walkin_status === 'PM').length
+    const leads = walkIns.filter(w => w.assigned_agent_id === agent.id)
+
+    // NL: lead_source = 'today' (old imports) OR walk_in_status = 'NL' (new flow)
+    const nl = leads.filter(w =>
+      w.lead_source === 'today' || w.walk_in_status === 'NL'
+    ).length
+
+    // CM: lead_source = 'this_month' OR walk_in_status = 'CM'
+    const cm = leads.filter(w =>
+      w.lead_source === 'this_month' || w.walk_in_status === 'CM'
+    ).length
+
+    // PM: lead_source = 'previous_month' OR walk_in_status = 'PM'
+    const pm = leads.filter(w =>
+      w.lead_source === 'previous_month' || w.walk_in_status === 'PM'
+    ).length
+
     const total     = leads.length
-    const soldLeads = leads.filter(w => w.remarks === 'Sold')
+    const soldLeads = leads.filter(w => w.remarks === 'Sold' || w.remarks === 'sold')
     const sold      = soldLeads.length
     const soldGrams = soldLeads.reduce((s, w) => s + (parseFloat(w.grams_sold) || 0), 0)
     return { agent, nl, cm, pm, total, sold, soldGrams }
   })
 }
 
-// ── Master source list — all known lead sources ───────────────────
-const ALL_LEAD_SOURCES = [
-  'Google', 'WhatsApp Calls', 'Call Centre', 'CHATBOT', 'WEBFORM',
-  'Kerala Leads', 'Suvarna News', 'ROK Bus Campaign', 'Hordings Bus Shelters',
-  'Website', 'JUSTDAIL', 'Zee Kannada', 'Call Back', 'OLD CRM',
-  'BMTC Bus Campaign', 'Andhra Pradesh Calls', 'TV 9', 'Signage',
-  'Hathway', 'Social Media', 'LED Boards', 'Colors Kannada', 'Public TV',
-  'Vijaya Karnataka', 'Gnani', 'Social Media New', 'DEN Cable',
-  'Newspaper', 'News 18',
-]
-
-// ── Source stats builder — ALL sources always shown ───────────────
+// ── Source stats builder — derived from remarks (lead channel) ────
 function buildSourceStats(walkIns) {
-  const extraSources = [...new Set(walkIns.map(w => w.lead_source).filter(Boolean))]
-    .filter(s => !ALL_LEAD_SOURCES.includes(s))
-  const sources = [...ALL_LEAD_SOURCES, ...extraSources]
-  return sources
+  // For imported data, the marketing channel lives in the remarks column
+  const allSources = [...new Set(walkIns.map(w => w.remarks).filter(Boolean))].sort()
+
+  return allSources
     .map(source => {
-      const sl        = walkIns.filter(w => w.lead_source === source)
-      const nl        = sl.filter(w => w.walkin_status === 'NL').length
-      const cm        = sl.filter(w => w.walkin_status === 'CM').length
-      const pm        = sl.filter(w => w.walkin_status === 'PM').length
+      const sl = walkIns.filter(w => w.remarks === source)
+
+      const nl = sl.filter(w =>
+        w.lead_source === 'today' || w.walk_in_status === 'NL'
+      ).length
+      const cm = sl.filter(w =>
+        w.lead_source === 'this_month' || w.walk_in_status === 'CM'
+      ).length
+      const pm = sl.filter(w =>
+        w.lead_source === 'previous_month' || w.walk_in_status === 'PM'
+      ).length
+
       const total     = sl.length
-      const soldLeads = sl.filter(w => w.remarks === 'Sold')
+      const soldLeads = sl.filter(w => w.remarks === 'Sold' || w.walk_in_status === 'Sold')
       const sold      = soldLeads.length
       const soldGrams = soldLeads.reduce((s, w) => s + (parseFloat(w.grams_sold) || 0), 0)
+
       return { source, nl, cm, pm, total, sold, soldGrams }
     })
+    .filter(s => s.total > 0)
     .sort((a, b) => b.total - a.total)
 }
 
@@ -191,10 +203,11 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
     const { from, to } = appliedRange || getDateRange(period)
 
     const [{ data: walkIns }, { data: agentList }] = await Promise.all([
-      supabase.from('walk_ins').select('*')
+      supabase.from('walk_ins')
+        .select('id, customer_name, assigned_agent_id, submitted_by, lead_source, walk_in_status, remarks, grams_sold, grams, created_at, status, walk_in_type')
         .eq('status', 'completed')
-        .gte('updated_at', from)
-        .lte('updated_at', to),
+        .gte('created_at', from)
+        .lte('created_at', to),
       supabase.from('profiles').select('id, name, assigned_tl')
         .eq('role', 'agent').order('name'),
     ])
