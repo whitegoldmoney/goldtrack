@@ -154,12 +154,12 @@ const DATE_INPUT  = {
 export default function AgentPerformanceDashboard({ profile, toast }) {
   const [period,      setPeriod]      = useState('Today')
   const [teamFilter,  setTeamFilter]  = useState('')
-  const [hideZero,    setHideZero]    = useState(true)
+  const [hideZero,    setHideZero]    = useState(false)
   const [tls,         setTls]         = useState([])
   const [rows,        setRows]        = useState([])
   const [sourceRows,  setSourceRows]  = useState([])
-  const [walkInsRaw,  setWalkInsRaw]  = useState([])
-  const [agentsFull,  setAgentsFull]  = useState([])
+  const [walkIns,     setWalkIns]     = useState([])
+  const [agents,      setAgents]      = useState([])
   const [loading,     setLoading]     = useState(true)
 
   // Custom date range
@@ -217,37 +217,50 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
 
     console.log('Date range:', from, 'to', to)
 
-    const { data: walkIns, error } = await supabase
-      .from('walk_ins')
-      .select('id, customer_name, assigned_agent_id, submitted_by, lead_source, walkin_status, walk_in_status, remarks, grams_sold, grams, created_at, visit_date, status, walk_in_type')
-      .gte('visit_date', from)
-      .lte('visit_date', to)
-      .not('status', 'in', '(draft,pending,rejected)')
+    // Fetch walk-ins, agents, TLs all in parallel
+    const [walkInsResult, agentsResult, tlsResult] = await Promise.all([
+      supabase
+        .from('walk_ins')
+        .select('id, customer_name, assigned_agent_id, submitted_by, lead_source, walkin_status, walk_in_status, remarks, grams_sold, grams, created_at, visit_date, status, walk_in_type')
+        .gte('visit_date', from)
+        .lte('visit_date', to)
+        .not('status', 'in', '(draft,pending,rejected)'),
 
-    if (error) {
-      console.error('Walk-ins fetch error:', error)
-      setLoading(false)
-      return
-    }
+      supabase
+        .from('profiles')
+        .select('id, name, assigned_tl')
+        .eq('role', 'agent')
+        .order('name'),
 
-    const wi = walkIns || []
-    console.log('Total walk-ins fetched:', wi.length)
-    console.log('Walk-ins with agent:', wi.filter(w => w.assigned_agent_id).length)
-
-    const [{ data: agentList }, { data: tlList }] = await Promise.all([
-      supabase.from('profiles').select('id, name, assigned_tl').eq('role', 'agent').order('name'),
-      supabase.from('profiles').select('id, name').eq('role', 'tl').order('name'),
+      supabase
+        .from('profiles')
+        .select('id, name')
+        .eq('role', 'tl')
+        .order('name'),
     ])
 
-    let agents = agentList || []
-    if (profile.role === 'admin' && teamFilter)
-      agents = agents.filter(a => a.assigned_tl === teamFilter)
+    if (walkInsResult.error) console.error('Walk-ins error:', walkInsResult.error)
+    if (agentsResult.error) console.error('Agents error:', agentsResult.error)
 
-    setTls(tlList || [])
-    setRows(buildStats(wi, agents))
-    setSourceRows(buildSourceStats(wi))
-    setWalkInsRaw(wi)
-    setAgentsFull(agents)
+    const wi          = walkInsResult.data  || []
+    const tlList      = tlsResult.data      || []
+    let   agentList   = agentsResult.data   || []
+
+    console.log('Walk-ins fetched:', wi.length, '| Agents fetched:', agentList.length)
+    console.log('Walk-ins with agent:', wi.filter(w => w.assigned_agent_id).length)
+
+    if (profile.role === 'admin' && teamFilter)
+      agentList = agentList.filter(a => a.assigned_tl === teamFilter)
+
+    // Compute stats from fresh data before setting state
+    const statsRows  = buildStats(wi, agentList)
+    const srcRows    = buildSourceStats(wi)
+
+    setWalkIns(wi)
+    setAgents(agentList)
+    setTls(tlList)
+    setRows(statsRows)
+    setSourceRows(srcRows)
     setLoading(false)
   }
 
@@ -273,7 +286,7 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
 
   // ── Hourly helpers ────────────────────────────────────────────
   function getCount(agentId, slot) {
-    return walkInsRaw.filter(w => {
+    return walkIns.filter(w => {
       const hour = new Date(w.created_at).getHours()
       return w.submitted_by === agentId && hour >= slot.from && hour < slot.to
     }).length
@@ -281,14 +294,14 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
 
   const slotTotals = TIME_SLOTS.map(slot => ({
     slot,
-    total: agentsFull.reduce((sum, a) => sum + getCount(a.id, slot), 0),
+    total: agents.reduce((sum, a) => sum + getCount(a.id, slot), 0),
   }))
   const peakSlot = slotTotals.length
     ? slotTotals.reduce((max, s) => s.total > max.total ? s : max, slotTotals[0])
     : null
 
-  const busiestAgent = agentsFull
-    .map(a => ({ name: a.name, total: walkInsRaw.filter(w => w.submitted_by === a.id).length }))
+  const busiestAgent = agents
+    .map(a => ({ name: a.name, total: walkIns.filter(w => w.submitted_by === a.id).length }))
     .sort((a, b) => b.total - a.total)[0] || { name: '—', total: 0 }
 
   const currentHour   = new Date().getHours()
@@ -297,7 +310,7 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
     currentHour >= slot.from && currentHour < slot.to
 
   const displayRows = hideZero ? rows.filter(r => r.total > 0) : rows
-  const maxTotal    = Math.max(...rows.map(r => r.total), 0)
+  const maxTotal    = rows.length ? Math.max(...rows.map(r => r.total), 0) : 0
 
   // ── Period controls ───────────────────────────────────────────
   function selectPeriod(label) {
@@ -341,7 +354,7 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
     })
 
     // Sheet 3 — Hourly (agents as rows, slots as columns)
-    const hourlyExportData = agentsFull.map(agent => ({
+    const hourlyExportData = agents.map(agent => ({
       'Agent Name': agent.name,
       ...TIME_SLOTS.reduce((acc, slot) => ({ ...acc, [slot.label]: getCount(agent.id, slot) }), {}),
       'Total': TIME_SLOTS.reduce((sum, slot) => sum + getCount(agent.id, slot), 0),
@@ -350,9 +363,9 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
       'Agent Name': 'TOTAL',
       ...TIME_SLOTS.reduce((acc, slot) => ({
         ...acc,
-        [slot.label]: agentsFull.reduce((s, a) => s + getCount(a.id, slot), 0),
+        [slot.label]: agents.reduce((s, a) => s + getCount(a.id, slot), 0),
       }), {}),
-      'Total': walkInsRaw.length,
+      'Total': walkIns.length,
     })
 
     const wb = XLSX.utils.book_new()
@@ -414,8 +427,8 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
         </div>
       </div>
 
-      {loading ? <Loading /> : rows.length === 0 ? (
-        <Empty icon="📊" text="No agents found for the selected filter." />
+      {loading ? <Loading /> : agents.length === 0 ? (
+        <Empty icon="📊" text="No agents found." />
       ) : (
         <div style={{ maxWidth: 1100 }}>
 
@@ -434,12 +447,12 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
 
           {totals.total === 0 && (
             <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 10 }}>
-              No completed walk-ins for this period.
+              No walk-ins found for this period.
             </div>
           )}
-          {displayRows.length === 0 && hideZero && (
+          {displayRows.length === 0 && hideZero && totals.total > 0 && (
             <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 10 }}>
-              No active agents for this period. Uncheck "Active only" to see all.
+              All agents have 0 walk-ins. Uncheck "Active only" to see all.
             </div>
           )}
 
@@ -613,7 +626,7 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
                 </tr>
               </thead>
               <tbody>
-                {agentsFull.map(agent => {
+                {agents.map(agent => {
                   const agentTotal = TIME_SLOTS.reduce((sum, slot) => sum + getCount(agent.id, slot), 0)
                   if (hideZero && agentTotal === 0) return null
                   return (
@@ -659,7 +672,7 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
                     TOTAL
                   </td>
                   {TIME_SLOTS.map(slot => {
-                    const slotTotal = agentsFull.reduce((sum, a) => sum + getCount(a.id, slot), 0)
+                    const slotTotal = agents.reduce((sum, a) => sum + getCount(a.id, slot), 0)
                     return (
                       <td key={slot.label} style={{ textAlign: 'center', padding: '8px 6px', fontSize: 12, fontFamily: 'DM Mono' }}>
                         {slotTotal || '—'}
@@ -667,7 +680,7 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
                     )
                   })}
                   <td style={{ textAlign: 'center', padding: '8px 6px', fontSize: 12, fontFamily: 'DM Mono', position: 'sticky', right: 0, background: 'var(--dark)', borderLeft: '1px solid rgba(255,255,255,0.1)' }}>
-                    {agentsFull.reduce((sum, a) => sum + walkInsRaw.filter(w => w.submitted_by === a.id).length, 0) || '—'}
+                    {agents.reduce((sum, a) => sum + walkIns.filter(w => w.submitted_by === a.id).length, 0) || '—'}
                   </td>
                 </tr>
               </tfoot>
