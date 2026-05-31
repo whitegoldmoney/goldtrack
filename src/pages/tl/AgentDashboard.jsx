@@ -1,53 +1,43 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../../lib/supabase'
 import { Loading, Empty } from '../../components/UI'
 
-// ── Date range helper — returns plain date strings for visit_date ─
-function getDateRange(period) {
-  const today = new Date().toISOString().split('T')[0]
-  if (period === 'Today')
-    return { from: today, to: today }
-  if (period === 'This Week') {
-    const d = new Date(); d.setDate(d.getDate() - d.getDay() + 1) // Monday
-    return { from: d.toISOString().split('T')[0], to: today }
-  }
-  if (period === 'This Month')
-    return { from: `${today.slice(0, 7)}-01`, to: today }
-  return { from: '2020-01-01', to: today }
-}
+// getDateRange is defined inside the component to close over state
 
 // ── Agent stats builder ───────────────────────────────────────────
 function buildStats(walkIns, agents) {
   return agents.map(agent => {
-    const leads = walkIns.filter(w => w.assigned_agent_id === agent.id)
+    const agentLeads = walkIns.filter(w => w.assigned_agent_id === agent.id)
 
-    // NL: lead_source = 'today' (old imports) OR walk_in_status = 'NL' (new flow)
-    const nl = leads.filter(w =>
-      w.lead_source === 'today' || w.walkin_status === 'NL'
+    // NL: lead_source = 'today' OR walkin_status / walk_in_status = 'NL'
+    const nl = agentLeads.filter(w =>
+      w.lead_source === 'today' ||
+      w.walkin_status === 'NL' || w.walk_in_status === 'NL'
     ).length
 
-    // CM: lead_source = 'this_month' OR walk_in_status = 'CM'
-    const cm = leads.filter(w =>
-      w.lead_source === 'this_month' || w.walkin_status === 'CM'
+    // CM: lead_source = 'this_month' OR walkin_status / walk_in_status = 'CM'
+    const cm = agentLeads.filter(w =>
+      w.lead_source === 'this_month' ||
+      w.walkin_status === 'CM' || w.walk_in_status === 'CM'
     ).length
 
-    // PM: lead_source = 'previous_month' OR walk_in_status = 'PM'
-    const pm = leads.filter(w =>
-      w.lead_source === 'previous_month' || w.walkin_status === 'PM'
+    // PM: lead_source = 'previous_month' OR walkin_status / walk_in_status = 'PM'
+    const pm = agentLeads.filter(w =>
+      w.lead_source === 'previous_month' ||
+      w.walkin_status === 'PM' || w.walk_in_status === 'PM'
     ).length
 
-    const total     = leads.length
-    const soldLeads = leads.filter(w => w.remarks === 'Sold' || w.remarks === 'sold')
+    const total     = agentLeads.length
+    const soldLeads = agentLeads.filter(w => String(w.remarks || '').toLowerCase() === 'sold')
     const sold      = soldLeads.length
     const soldGrams = soldLeads.reduce((s, w) => s + (parseFloat(w.grams_sold) || 0), 0)
     return { agent, nl, cm, pm, total, sold, soldGrams }
   })
 }
 
-// ── Source stats builder — derived from remarks (lead channel) ────
+// ── Source stats builder — grouped by remarks (lead channel) ─────
 function buildSourceStats(walkIns) {
-  // For imported data, the marketing channel lives in the remarks column
   const allSources = [...new Set(walkIns.map(w => w.remarks).filter(Boolean))].sort()
 
   return allSources
@@ -55,17 +45,20 @@ function buildSourceStats(walkIns) {
       const sl = walkIns.filter(w => w.remarks === source)
 
       const nl = sl.filter(w =>
-        w.lead_source === 'today' || w.walkin_status === 'NL'
+        w.lead_source === 'today' ||
+        w.walkin_status === 'NL' || w.walk_in_status === 'NL'
       ).length
       const cm = sl.filter(w =>
-        w.lead_source === 'this_month' || w.walkin_status === 'CM'
+        w.lead_source === 'this_month' ||
+        w.walkin_status === 'CM' || w.walk_in_status === 'CM'
       ).length
       const pm = sl.filter(w =>
-        w.lead_source === 'previous_month' || w.walkin_status === 'PM'
+        w.lead_source === 'previous_month' ||
+        w.walkin_status === 'PM' || w.walk_in_status === 'PM'
       ).length
 
       const total     = sl.length
-      const soldLeads = sl.filter(w => w.remarks === 'Sold' || w.walkin_status === 'Sold')
+      const soldLeads = sl.filter(w => String(w.remarks || '').toLowerCase() === 'sold')
       const sold      = soldLeads.length
       const soldGrams = soldLeads.reduce((s, w) => s + (parseFloat(w.grams_sold) || 0), 0)
 
@@ -159,28 +152,48 @@ const DATE_INPUT  = {
 
 // ── Component ─────────────────────────────────────────────────────
 export default function AgentPerformanceDashboard({ profile, toast }) {
-  const [period,       setPeriod]       = useState('Today')
-  const [teamFilter,   setTeamFilter]   = useState('')
-  const [hideZero,     setHideZero]     = useState(true)
-  const [tls,          setTls]          = useState([])
-  const [rows,         setRows]         = useState([])
-  const [sourceRows,   setSourceRows]   = useState([])
-  const [walkInsRaw,   setWalkInsRaw]   = useState([])
-  const [agentsFull,   setAgentsFull]   = useState([])
-  const [loading,      setLoading]      = useState(true)
+  const [period,      setPeriod]      = useState('Today')
+  const [teamFilter,  setTeamFilter]  = useState('')
+  const [hideZero,    setHideZero]    = useState(true)
+  const [tls,         setTls]         = useState([])
+  const [rows,        setRows]        = useState([])
+  const [sourceRows,  setSourceRows]  = useState([])
+  const [walkInsRaw,  setWalkInsRaw]  = useState([])
+  const [agentsFull,  setAgentsFull]  = useState([])
+  const [loading,     setLoading]     = useState(true)
 
   // Custom date range
-  const [showCustom,   setShowCustom]   = useState(false)
-  const [customFrom,   setCustomFrom]   = useState('')
-  const [customTo,     setCustomTo]     = useState('')
-  const [appliedRange, setAppliedRange] = useState(null)
+  const [showCustom,  setShowCustom]  = useState(false)
+  const [customFrom,  setCustomFrom]  = useState('')
+  const [customTo,    setCustomTo]    = useState('')
 
   const todayStr = new Date().toISOString().split('T')[0]
 
-  useEffect(() => {
-    supabase.from('profiles').select('id, name').eq('role', 'tl').order('name')
-      .then(({ data }) => setTls(data || []))
-  }, [])
+  // ── Date range — plain date strings for visit_date ────────────
+  function getDateRange() {
+    const now = new Date()
+    const today = now.toISOString().split('T')[0]
+
+    if (showCustom && customFrom && customTo)
+      return { from: customFrom, to: customTo }
+
+    if (period === 'Today')
+      return { from: today, to: today }
+
+    if (period === 'This Week') {
+      const d = new Date(now)
+      d.setDate(now.getDate() - now.getDay() + 1) // Monday
+      return { from: d.toISOString().split('T')[0], to: today }
+    }
+
+    if (period === 'This Month') {
+      const yr  = now.getFullYear()
+      const mon = String(now.getMonth() + 1).padStart(2, '0')
+      return { from: `${yr}-${mon}-01`, to: today }
+    }
+
+    return { from: '2020-01-01', to: today }
+  }
 
   function tlBadge(tlId) {
     if (!tlId) return <span style={{ color: 'var(--text3)' }}>—</span>
@@ -198,33 +211,49 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
   }
 
   // ── Load data ─────────────────────────────────────────────────
-  const loadData = useCallback(async () => {
+  async function loadData() {
     setLoading(true)
-    const { from, to } = appliedRange || getDateRange(period)
+    const { from, to } = getDateRange()
 
-    const [{ data: walkIns }, { data: agentList }] = await Promise.all([
-      supabase.from('walk_ins')
-        .select('id, customer_name, assigned_agent_id, submitted_by, lead_source, walkin_status, remarks, grams_sold, grams, created_at, visit_date, status, walk_in_type')
-        .eq('status', 'completed')
-        .gte('visit_date', from)
-        .lte('visit_date', to),
-      supabase.from('profiles').select('id, name, assigned_tl')
-        .eq('role', 'agent').order('name'),
+    console.log('Date range:', from, 'to', to)
+
+    const { data: walkIns, error } = await supabase
+      .from('walk_ins')
+      .select('id, customer_name, assigned_agent_id, submitted_by, lead_source, walkin_status, walk_in_status, remarks, grams_sold, grams, created_at, visit_date, status, walk_in_type')
+      .gte('visit_date', from)
+      .lte('visit_date', to)
+      .neq('status', 'draft')
+      .neq('status', 'pending')
+      .neq('status', 'rejected')
+
+    if (error) {
+      console.error('Walk-ins fetch error:', error)
+      setLoading(false)
+      return
+    }
+
+    const wi = walkIns || []
+    console.log('Total walk-ins fetched:', wi.length)
+    console.log('Walk-ins with agent:', wi.filter(w => w.assigned_agent_id).length)
+
+    const [{ data: agentList }, { data: tlList }] = await Promise.all([
+      supabase.from('profiles').select('id, name, assigned_tl').eq('role', 'agent').order('name'),
+      supabase.from('profiles').select('id, name').eq('role', 'tl').order('name'),
     ])
 
     let agents = agentList || []
     if (profile.role === 'admin' && teamFilter)
       agents = agents.filter(a => a.assigned_tl === teamFilter)
 
-    const wi = walkIns || []
+    setTls(tlList || [])
     setRows(buildStats(wi, agents))
     setSourceRows(buildSourceStats(wi))
     setWalkInsRaw(wi)
     setAgentsFull(agents)
     setLoading(false)
-  }, [period, teamFilter, profile.id, profile.role, appliedRange])
+  }
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => { loadData() }, [period, showCustom, customFrom, customTo, teamFilter])
 
   // ── Aggregates ────────────────────────────────────────────────
   const totals = {
@@ -266,7 +295,7 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
 
   const currentHour   = new Date().getHours()
   const isCurrentSlot = slot =>
-    period === 'Today' && !appliedRange &&
+    period === 'Today' && !showCustom &&
     currentHour >= slot.from && currentHour < slot.to
 
   const displayRows = hideZero ? rows.filter(r => r.total > 0) : rows
@@ -274,12 +303,12 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
 
   // ── Period controls ───────────────────────────────────────────
   function selectPeriod(label) {
-    setPeriod(label); setShowCustom(false); setAppliedRange(null)
+    setPeriod(label); setShowCustom(false)
   }
   function applyCustom() {
     if (!customFrom || !customTo) return
     if (customFrom > customTo) { toast('Start date cannot be after end date.', 'error'); return }
-    setAppliedRange({ from: customFrom, to: customTo })
+    setShowCustom(true) // triggers useEffect via showCustom + customFrom + customTo
   }
 
   // ── Excel export ──────────────────────────────────────────────
