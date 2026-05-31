@@ -222,9 +222,7 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
       .select('id, customer_name, assigned_agent_id, submitted_by, lead_source, walkin_status, walk_in_status, remarks, grams_sold, grams, created_at, visit_date, status, walk_in_type')
       .gte('visit_date', from)
       .lte('visit_date', to)
-      .neq('status', 'draft')
-      .neq('status', 'pending')
-      .neq('status', 'rejected')
+      .not('status', 'in', '(draft,pending,rejected)')
 
     if (error) {
       console.error('Walk-ins fetch error:', error)
