@@ -36,24 +36,26 @@ function buildStats(walkIns, agents) {
   })
 }
 
-// ── Source stats builder — grouped by remarks (lead channel) ─────
+// ── Source stats builder — grouped by lead_source (marketing channel) ──
+// Excludes old time-indicator values (today / this_month / previous_month)
+const TIME_INDICATORS = new Set(['today', 'this_month', 'previous_month'])
+
 function buildSourceStats(walkIns) {
-  const allSources = [...new Set(walkIns.map(w => w.remarks).filter(Boolean))].sort()
+  const allSources = [
+    ...new Set(walkIns.map(w => w.lead_source).filter(s => s && !TIME_INDICATORS.has(s)))
+  ].sort()
 
   return allSources
     .map(source => {
-      const sl = walkIns.filter(w => w.remarks === source)
+      const sl = walkIns.filter(w => w.lead_source === source)
 
       const nl = sl.filter(w =>
-        w.lead_source === 'today' ||
         w.walkin_status === 'NL' || w.walk_in_status === 'NL'
       ).length
       const cm = sl.filter(w =>
-        w.lead_source === 'this_month' ||
         w.walkin_status === 'CM' || w.walk_in_status === 'CM'
       ).length
       const pm = sl.filter(w =>
-        w.lead_source === 'previous_month' ||
         w.walkin_status === 'PM' || w.walk_in_status === 'PM'
       ).length
 
@@ -169,30 +171,43 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
 
   const todayStr = new Date().toISOString().split('T')[0]
 
-  // ── Date range — plain date strings for visit_date ────────────
+  // ── Date range — datetime strings for created_at filtering ──────
+  // visit_date is only set for PM records; created_at is always populated
   function getDateRange() {
     const now = new Date()
-    const today = now.toISOString().split('T')[0]
+    const todayDate = now.toISOString().split('T')[0]
 
     if (showCustom && customFrom && customTo)
-      return { from: customFrom, to: customTo }
+      return {
+        from: customFrom + 'T00:00:00',
+        to:   customTo   + 'T23:59:59.999',
+      }
 
     if (period === 'Today')
-      return { from: today, to: today }
+      return {
+        from: todayDate + 'T00:00:00',
+        to:   todayDate + 'T23:59:59.999',
+      }
 
     if (period === 'This Week') {
       const d = new Date(now)
       d.setDate(now.getDate() - now.getDay() + 1) // Monday
-      return { from: d.toISOString().split('T')[0], to: today }
+      return {
+        from: d.toISOString().split('T')[0] + 'T00:00:00',
+        to:   todayDate + 'T23:59:59.999',
+      }
     }
 
     if (period === 'This Month') {
       const yr  = now.getFullYear()
       const mon = String(now.getMonth() + 1).padStart(2, '0')
-      return { from: `${yr}-${mon}-01`, to: today }
+      return {
+        from: `${yr}-${mon}-01T00:00:00`,
+        to:   todayDate + 'T23:59:59.999',
+      }
     }
 
-    return { from: '2020-01-01', to: today }
+    return { from: '2020-01-01T00:00:00', to: todayDate + 'T23:59:59.999' }
   }
 
   function tlBadge(tlId) {
@@ -222,8 +237,8 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
       supabase
         .from('walk_ins')
         .select('id, customer_name, assigned_agent_id, submitted_by, lead_source, walkin_status, walk_in_status, remarks, grams_sold, grams, created_at, visit_date, status, walk_in_type')
-        .gte('visit_date', from)
-        .lte('visit_date', to)
+        .gte('created_at', from)
+        .lte('created_at', to)
         .not('status', 'in', '(draft,pending,rejected)'),
 
       supabase
