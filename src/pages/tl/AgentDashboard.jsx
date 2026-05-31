@@ -24,17 +24,17 @@ function buildStats(walkIns, agents) {
 
     // NL: lead_source = 'today' (old imports) OR walk_in_status = 'NL' (new flow)
     const nl = leads.filter(w =>
-      w.lead_source === 'today' || w.walk_in_status === 'NL'
+      w.lead_source === 'today' || w.walkin_status === 'NL'
     ).length
 
     // CM: lead_source = 'this_month' OR walk_in_status = 'CM'
     const cm = leads.filter(w =>
-      w.lead_source === 'this_month' || w.walk_in_status === 'CM'
+      w.lead_source === 'this_month' || w.walkin_status === 'CM'
     ).length
 
     // PM: lead_source = 'previous_month' OR walk_in_status = 'PM'
     const pm = leads.filter(w =>
-      w.lead_source === 'previous_month' || w.walk_in_status === 'PM'
+      w.lead_source === 'previous_month' || w.walkin_status === 'PM'
     ).length
 
     const total     = leads.length
@@ -55,17 +55,17 @@ function buildSourceStats(walkIns) {
       const sl = walkIns.filter(w => w.remarks === source)
 
       const nl = sl.filter(w =>
-        w.lead_source === 'today' || w.walk_in_status === 'NL'
+        w.lead_source === 'today' || w.walkin_status === 'NL'
       ).length
       const cm = sl.filter(w =>
-        w.lead_source === 'this_month' || w.walk_in_status === 'CM'
+        w.lead_source === 'this_month' || w.walkin_status === 'CM'
       ).length
       const pm = sl.filter(w =>
-        w.lead_source === 'previous_month' || w.walk_in_status === 'PM'
+        w.lead_source === 'previous_month' || w.walkin_status === 'PM'
       ).length
 
       const total     = sl.length
-      const soldLeads = sl.filter(w => w.remarks === 'Sold' || w.walk_in_status === 'Sold')
+      const soldLeads = sl.filter(w => w.remarks === 'Sold' || w.walkin_status === 'Sold')
       const sold      = soldLeads.length
       const soldGrams = soldLeads.reduce((s, w) => s + (parseFloat(w.grams_sold) || 0), 0)
 
@@ -204,10 +204,10 @@ export default function AgentPerformanceDashboard({ profile, toast }) {
 
     const [{ data: walkIns }, { data: agentList }] = await Promise.all([
       supabase.from('walk_ins')
-        .select('id, customer_name, assigned_agent_id, submitted_by, lead_source, walk_in_status, remarks, grams_sold, grams, created_at, status, walk_in_type')
+        .select('id, customer_name, assigned_agent_id, submitted_by, lead_source, walkin_status, remarks, grams_sold, grams, created_at, status, walk_in_type')
         .eq('status', 'completed')
-        .gte('created_at', from)
-        .lte('created_at', to),
+        .gte('updated_at', from)
+        .lte('updated_at', to),
       supabase.from('profiles').select('id, name, assigned_tl')
         .eq('role', 'agent').order('name'),
     ])
